@@ -59,6 +59,7 @@ void run_import(uint32_t idx, emul_ppc_state *state)
         exit(1);
     }
 
+    emul_ppc_dump();
     importFunc(state);
 }
 

@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <byteswap.h>
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -29,6 +30,13 @@ typedef struct {
     uint32_t fpscr;
     uint32_t pc;
 } emul_ppc_state;
+
+#define PPC_ARG_UINT(cpu, i) cpu->r[2 + i]
+#define PPC_ARG_PTR(cpu, i) (void *)((uint8_t *)cpu->ram + cpu->r[2 + i])
+#define PPC_RETURN_UINT(cpu, i) cpu->r[3] = i
+
+#define BigWord bswap_32
+#define BigHalf bswap_16
 
 extern void *ram;
 extern uint32_t ram_size;
