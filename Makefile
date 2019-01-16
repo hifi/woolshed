@@ -1,31 +1,45 @@
+DEBUG    = 1
+
 REV     ?= $(shell git rev-parse --short @{0})
-CFLAGS  ?= -g3 -std=c99 -pedantic -Wall -Wextra -Wno-unused-parameter -DREV=\"$(REV)\"
-TARGET  ?= peftool
+CFLAGS  ?= -std=c99 -pedantic -Wall -Wextra -Wno-unused-parameter -Wl,--export-dynamic -DREV=\"$(REV)\" -Isrc
 CC       = gcc
 
 ifdef DEBUG
-CFLAGS  += -ggdb
+CFLAGS  += -ggdb -DDEBUG
 else
 CFLAGS  += -O2
 endif
 
-SRC     = $(wildcard src/*.c)
-HDR     = $(wildcard src/*.h)
+PEFTOOL            ?= peftool
+PEFTOOL_SRC         = $(wildcard src/*.c)
+PEFTOOL_HDR         = $(wildcard src/*.h)
 
-all: $(TARGET) StdCLib.so InterfaceLib.so MathLib.so
+STDCLIB            ?= StdCLib.so
+STDCLIB_SRC         = $(wildcard lib/StdCLib/*.c)
+STDCLIB_HDR         = $(wildcard lib/StdCLib/*.h) src/debug.h
 
-$(TARGET): $(SRC) $(HDR)
-	$(CC) $(CFLAGS) -o $@ $(SRC) -lm -ldl
+INTERFACELIB       ?= InterfaceLib.so
+INTERFACELIB_SRC    = $(wildcard lib/InterfaceLib/*.c)
+INTERFACELIB_HDR    = $(wildcard lib/InterfaceLib/*.h) src/debug.h
 
-StdCLib.so: lib/stdclib.c
-	$(CC) -shared $(CFLAGS) -o $@ lib/stdclib.c
+MATHLIB            ?= MathLib.so
+MATHLIB_SRC         = $(wildcard lib/MathLib/*.c)
+MATHLIB_HDR         = $(wildcard lib/MathLib/*.h) src/debug.h
 
-InterfaceLib.so: lib/interfacelib.c
-	$(CC) -shared $(CFLAGS) -o $@ lib/interfacelib.c
+all: $(PEFTOOL) $(STDCLIB) $(INTERFACELIB) $(MATHLIB)
 
-MathLib.so: lib/mathlib.c
-	$(CC) -shared $(CFLAGS) -o $@ lib/mathlib.c
+$(PEFTOOL): $(PEFTOOL_SRC) $(PEFTOOL_HDR)
+	$(CC) $(CFLAGS) -o $@ $(PEFTOOL_SRC) -lm -ldl
+
+$(STDCLIB): $(STDCLIB_SRC) $(STDCLIB_HDR)
+	$(CC) -shared $(CFLAGS) -o $@ $(STDCLIB_SRC)
+
+$(INTERFACELIB): $(INTERFACELIB_SRC) $(INTERFACELIB_HDR)
+	$(CC) -shared $(CFLAGS) -o $@ $(INTERFACELIB_SRC)
+
+$(MATHLIB): $(MATHLIB_SRC) $(MATHLIB_HDR)
+	$(CC) -shared $(CFLAGS) -o $@ $(MATHLIB_SRC)
 
 .PHONY: clean
 clean:
-	$(RM) $(TARGET) StdCLib.so InterfaceLib.so MathLib.so
+	$(RM) $(PEFTOOL) $(STDCLIB) $(INTERFACELIB) $(MATHLIB)

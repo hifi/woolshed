@@ -31,12 +31,13 @@ typedef struct {
     uint32_t pc;
 } emul_ppc_state;
 
-#define PPC_ARG_UINT(cpu, i) cpu->r[2 + i]
+#define PPC_ARG_INT(cpu, i) (int32_t)cpu->r[2 + i]
+#define PPC_ARG_SHORT(cpu, i) (int16_t)cpu->r[2 + i]
 #define PPC_ARG_PTR(cpu, i) (void *)((uint8_t *)cpu->ram + cpu->r[2 + i])
-#define PPC_RETURN_UINT(cpu, i) cpu->r[3] = i
+#define PPC_RETURN_INT(cpu, i) cpu->r[3] = (int32_t)i; return;
 
-#define BigWord bswap_32
-#define BigHalf bswap_16
+#define PPC_INT bswap_32
+#define PPC_SHORT bswap_16
 
 extern void *ram;
 extern uint32_t ram_size;

@@ -55,11 +55,11 @@ void run_import(uint32_t idx, emul_ppc_state *state)
     {
         PEFSymbolTableEntry *symbol = &pef.symbols[idx];
         const char *symbolName = PEFLoaderString(pef, symbol->s.offset);
+        emul_ppc_dump();
         printf("Import '%s' (%d) missing!\n", symbolName, idx);
         exit(1);
     }
 
-    emul_ppc_dump();
     importFunc(state);
 }
 
@@ -204,7 +204,7 @@ int run(int argc, char **argv)
                     printf("     symbol %s", symbolName);
                     if (symbol->s.name == 2)  {
                         char buf[256];
-                        sprintf(buf, "emul_%s", symbolName);
+                        sprintf(buf, "ppc_%s", symbolName);
 
                         for (uint32_t i = 0; i < pef.loader->importedLibraryCount; i++)
                         {
