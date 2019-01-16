@@ -15,9 +15,46 @@ typedef struct {
 } SysEnvRec;
 
 typedef struct {
+    uint16_t v;
+    uint16_t h;
+} Point;
+
+typedef struct {
+    uint16_t top;
+    uint16_t left;
+    uint16_t bottom;
+    uint16_t right;
+} Rect;
+
+typedef struct {
+    uint16_t rgnSize;
+    Rect rgnBBox;
+    /* ... */
+} Region;
+
+typedef struct {
+    uint32_t baseAddr;
+    uint16_t rowBytes;
+    Rect bounds;
+} BitMap;
+
+typedef struct {
+    uint16_t data;
+    uint16_t mask;
+    Point hotSpot;
+} Cursor;
+
+typedef struct {
     uint8_t privates[76];
     uint32_t randSeed;
-    /* wip */
+    BitMap screenBits;
+    Cursor arrow;
+    Pattern dkGray;
+    Pattern ltGray;
+    Pattern gray;
+    Pattern black;
+    Pattern white;
+    uint32_t thePort;
 } QDGlobals;
 
 #pragma pack(pop)
