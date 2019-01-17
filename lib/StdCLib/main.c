@@ -22,9 +22,8 @@ void ppc___setjmp(emul_ppc_state *cpu)
     PPC_RETURN_INT(cpu, 0);
 }
 
-// FIXME: should end CPU emulation instead of calling exit() directly
 void ppc_exit(emul_ppc_state *cpu)
 {
-    FIXME("()");
-    exit(0);
+    INFO("()");
+    cpu->fault = PPC_FAULT_EXIT;
 }

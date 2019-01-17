@@ -39,30 +39,11 @@
 // global PPC CPU state
 static emul_ppc_state cpu;
 
-uint32_t import_base = 0x3000000; // FIXME: uh, no
-
-// FIXME: random pointer list to external symbols
-void *extImports[512];
-
-// FIXME: uh oh, run_import needed this outside run()
+// loaded PEF image
 PEFImage pef;
 
-// called by emul_ppc, should be handled from cpu state?
-void run_import(uint32_t idx, emul_ppc_state *state)
-{
-    void (*importFunc)(emul_ppc_state *) = extImports[idx];
-
-    if (!importFunc)
-    {
-        PEFSymbolTableEntry *symbol = &pef.symbols[idx];
-        const char *symbolName = PEFLoaderString(pef, symbol->s.offset);
-        emul_ppc_dump(&cpu);
-        printf("Import '%s' (%d) missing!\n", symbolName, idx);
-        exit(1);
-    }
-
-    importFunc(state);
-}
+// FIXME: random pointer list to external symbols
+static void *extImports[512];
 
 int run(int argc, char **argv)
 {
@@ -139,6 +120,7 @@ int run(int argc, char **argv)
 
         uint32_t relocAddress = pef.sections[relocSection->sectionIndex].defaultAddress;
         uint32_t importIndex = 0;
+        uint32_t importBase = 0x3000000; // FIXME: uh, no
         uint32_t sectionC = pef.sections[0].defaultAddress;
         uint32_t sectionD = pef.sections[1].defaultAddress;
 
@@ -227,14 +209,13 @@ int run(int argc, char **argv)
                         extImports[importIndex] = sym;
 
                         // this is a trampoline to run_import with importIndex
-                        uint32_t tmp[3];
-                        tmp[0] = bswap_32(import_base + 4); // relocation
+                        uint32_t tmp[2];
+                        tmp[0] = bswap_32(importBase + 4); // relocation
                         tmp[1] = bswap_32((6 << 26) | importIndex); // magic opcode
-                        tmp[2] = bswap_32(0x4e800020); // blr so the cpu jumps back
-                        memcpy((uint8_t *)cpu.ram + import_base, tmp, sizeof(tmp));
+                        memcpy((uint8_t *)cpu.ram + importBase, tmp, sizeof(tmp));
 
-                        relocBase[i] = bswap_32(import_base);
-                        import_base += sizeof(tmp);
+                        relocBase[i] = bswap_32(importBase);
+                        importBase += sizeof(tmp);
                     } else {
                         printf(" (using memory)\n");
                         // FIXME: these should come from the loaded library so these are dummies and of the wrong size (all words)
@@ -294,17 +275,54 @@ int run(int argc, char **argv)
     printf("Emulation starting at 0x%08X with TOC at 0x%08X\n", entryPoint, toc);
 
     cpu.pc = entryPoint;
-    cpu.lr = 0xFFFFFFFF;
     cpu.r[1] = cpu.ram_size - 0x10000; // FIXME: stack
     cpu.r[2] = toc;
 
-    //int step = 0;
-
     while (!cpu.fault) {
-        /*printf("Dumping step %i at %08X:\n", step, cpu.pc);
-        emul_ppc_dump(&cpu);*/
         emul_ppc_run(&cpu, 0);
-        //step++;
+
+        // handle some faults
+        if (cpu.fault == PPC_FAULT_INST)
+        {
+            uint32_t op = PPC_INT(*(uint32_t *)((uint8_t *)cpu.ram + cpu.pc - 4));
+            uint32_t primop = op >> 26;
+
+            // import call
+            if (primop == 6) {
+                uint32_t idx = (op & 0x3FFFFFF);
+                void (*importFunc)(emul_ppc_state *) = extImports[idx];
+
+                if (!importFunc)
+                {
+                    PEFSymbolTableEntry *symbol = &pef.symbols[idx];
+                    const char *symbolName = PEFLoaderString(pef, symbol->s.offset);
+                    emul_ppc_dump(&cpu);
+                    printf("PPC: Import '%s' (%d) missing!\n", symbolName, idx);
+                    break;
+                }
+
+                importFunc(&cpu);
+
+                if (cpu.fault == PPC_FAULT_EXIT)
+                    break;
+
+                cpu.pc = cpu.lr;
+                cpu.fault = PPC_FAULT_NONE;
+            } else {
+                fprintf(stderr, "PPC: Unhandled instruction at %08X\n", cpu.pc - 4);
+                emul_ppc_dump(&cpu);
+                break;
+            }
+        }
+        else if (cpu.fault == PPC_FAULT_MEM)
+        {
+            fprintf(stderr, "PPC: Address outside RAM at %08X\n", cpu.pc - 4);
+            emul_ppc_dump(&cpu);
+            break;
+        }
+        else if (cpu.fault == PPC_FAULT_EXIT) {
+            break;
+        }
     }
 
 cleanup:

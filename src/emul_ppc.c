@@ -110,7 +110,10 @@ static uint32_t field2mask[256];
 static inline uint8_t ReadMacInt8(emul_ppc_state *cpu, uint32_t addr)
 {
     if (addr > cpu->ram_size)
-        ERROR("Address outside RAM: 0x%08X\n", addr);
+    {
+        cpu->fault = PPC_FAULT_MEM;
+        return 0;
+    }
 
     return *((uint8_t *)cpu->ram + addr);
 }
@@ -118,7 +121,10 @@ static inline uint8_t ReadMacInt8(emul_ppc_state *cpu, uint32_t addr)
 static inline uint16_t ReadMacInt16(emul_ppc_state *cpu, uint32_t addr)
 {
     if (addr > cpu->ram_size)
-        ERROR("Address outside RAM: 0x%08X\n", addr);
+    {
+        cpu->fault = PPC_FAULT_MEM;
+        return 0;
+    }
 
     return PPC_SHORT(*(uint16_t *)((uint8_t *)cpu->ram + addr));
 }
@@ -126,7 +132,10 @@ static inline uint16_t ReadMacInt16(emul_ppc_state *cpu, uint32_t addr)
 static inline uint32_t ReadMacInt32(emul_ppc_state *cpu, uint32_t addr)
 {
     if (addr > cpu->ram_size)
-        ERROR("Address outside RAM: 0x%08X\n", addr);
+    {
+        cpu->fault = PPC_FAULT_MEM;
+        return 0;
+    }
 
     return PPC_INT(*(uint32_t *)((uint8_t *)cpu->ram + addr));
 }
@@ -134,7 +143,10 @@ static inline uint32_t ReadMacInt32(emul_ppc_state *cpu, uint32_t addr)
 static inline uint64_t ReadMacInt64(emul_ppc_state *cpu, uint32_t addr)
 {
     if (addr > cpu->ram_size)
-        ERROR("Address outside RAM: 0x%08X\n", addr);
+    {
+        cpu->fault = PPC_FAULT_MEM;
+        return 0;
+    }
 
     return PPC_INT64(*(uint64_t *)((uint8_t *)cpu->ram + addr));
 }
@@ -142,7 +154,10 @@ static inline uint64_t ReadMacInt64(emul_ppc_state *cpu, uint32_t addr)
 static inline void WriteMacInt8(emul_ppc_state *cpu, uint32_t addr, uint8_t val)
 {
     if (addr > cpu->ram_size)
-        ERROR("Address outside RAM: 0x%08X\n", addr);
+    {
+        cpu->fault = PPC_FAULT_MEM;
+        return;
+    }
 
     *((uint8_t *)cpu->ram + addr) = val;
 }
@@ -150,7 +165,10 @@ static inline void WriteMacInt8(emul_ppc_state *cpu, uint32_t addr, uint8_t val)
 static inline void WriteMacInt16(emul_ppc_state *cpu, uint32_t addr, uint16_t val)
 {
     if (addr > cpu->ram_size)
-        ERROR("Address outside RAM: 0x%08X\n", addr);
+    {
+        cpu->fault = PPC_FAULT_MEM;
+        return;
+    }
 
     *(uint16_t *)((uint8_t *)cpu->ram + addr) = PPC_SHORT(val);
 }
@@ -158,7 +176,10 @@ static inline void WriteMacInt16(emul_ppc_state *cpu, uint32_t addr, uint16_t va
 static inline void WriteMacInt32(emul_ppc_state *cpu, uint32_t addr, uint32_t val)
 {
     if (addr > cpu->ram_size)
-        ERROR("Address outside RAM: 0x%08X\n", addr);
+    {
+        cpu->fault = PPC_FAULT_MEM;
+        return;
+    }
 
     *(uint32_t *)((uint8_t *)cpu->ram + addr) = PPC_INT(val);
 }
@@ -166,7 +187,10 @@ static inline void WriteMacInt32(emul_ppc_state *cpu, uint32_t addr, uint32_t va
 static inline void WriteMacInt64(emul_ppc_state *cpu, uint32_t addr, uint64_t val)
 {
     if (addr > cpu->ram_size)
-        ERROR("Address outside RAM: 0x%08X\n", addr);
+    {
+        cpu->fault = PPC_FAULT_MEM;
+        return;
+    }
 
     *(uint64_t *)((uint8_t *)cpu->ram + addr) = PPC_INT64(val);
 }
@@ -375,8 +399,7 @@ bctr_nobranch:
         }
 
         default:
-            fprintf(stderr, "emul_ppc: Illegal 19 opcode %08x (exop %d) at %08x\n", op, exop, cpu->pc-4);
-            cpu->fault = 1;
+            cpu->fault = PPC_FAULT_INST;
             break;
     }
 }
@@ -650,8 +673,7 @@ cntlzw_done:if (op & 1)
                 case 8: cpu->r[rd] = cpu->lr; break;
                 case 9: cpu->r[rd] = cpu->ctr; break;
                 default:
-                    fprintf(stderr, "emul_ppc: Illegal mfspr opcode %08x at %08x\n", op, cpu->pc-4);
-                    cpu->fault = 1;
+                    cpu->fault = PPC_FAULT_INST;
             }
             break;
         }
@@ -704,8 +726,7 @@ cntlzw_done:if (op & 1)
                 case 8: cpu->lr = cpu->r[rd]; break;
                 case 9: cpu->ctr = cpu->r[rd]; break;
                 default:
-                    fprintf(stderr, "emul_ppc: Illegal mtspr opcode %08x at %08x\n", op, cpu->pc-4);
-                    cpu->fault = 1;
+                    cpu->fault = PPC_FAULT_INST;
             }
             break;
         }
@@ -958,8 +979,7 @@ cntlzw_done:if (op & 1)
 #endif
 
         default:
-            fprintf(stderr, "emul_ppc: Illegal 31 opcode %08x (exop %d) at %08x\n", op, exop, cpu->pc-4);
-            cpu->fault = 1;
+            cpu->fault = PPC_FAULT_INST;
             break;
     }
 }
@@ -974,8 +994,7 @@ static void emul59(emul_ppc_state *cpu, uint32_t op)
     uint32_t exop = (op >> 1) & 0x3ff;
     switch (exop) {
         default:
-            fprintf(stderr, "emul_ppc: Illegal 59 opcode %08x (exop %d) at %08x\n", op, exop, cpu->pc-4);
-            cpu->fault = 1;
+            cpu->fault = PPC_FAULT_INST;
             break;
     }
 }
@@ -1009,8 +1028,7 @@ static void emul63(emul_ppc_state *cpu, uint32_t op)
             break;
 
         default:
-            fprintf(stderr, "emul_ppc: Illegal 63 opcode %08x (exop %d) at %08x\n", op, exop, cpu->pc-4);
-            cpu->fault = 1;
+            cpu->fault = PPC_FAULT_INST;
             break;
     }
 }
@@ -1020,9 +1038,6 @@ static void emul63(emul_ppc_state *cpu, uint32_t op)
  *  Emulation step
  */
 
-// FIXME: refactor imports
-void run_import(uint32_t idx, emul_ppc_state *state);
-
 int emul_ppc_run(emul_ppc_state *cpu, int step)
 {
     while (!cpu->fault) {
@@ -1031,13 +1046,6 @@ int emul_ppc_run(emul_ppc_state *cpu, int step)
         cpu->pc += 4;
 
         switch (primop) {
-
-            case 6: {      // FIXME: custom import call trap, use syscall instead?
-                //printf("Extended opcode %08x at %08x (68k pc %08x)\n", op, pc-4, cpu->r[24]);
-                uint32_t idx = (op & 0x3FFFFFF);
-                run_import(idx, cpu);
-                break;
-            }
 
             case 7: {    // mulli
                 uint32_t rd = (op >> 21) & 0x1f;
@@ -1411,8 +1419,7 @@ bc_nobranch:
                 break;
 
             default:
-                fprintf(stderr, "emul_ppc: Illegal opcode %08x at %08x (prim %d)\n", op, cpu->pc-4, primop);
-                cpu->fault = 1;
+                cpu->fault = PPC_FAULT_INST;
                 break;
         }
 

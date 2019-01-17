@@ -18,6 +18,13 @@
 #include <stdint.h>
 #include <byteswap.h>
 
+enum {
+    PPC_FAULT_NONE  = 0,
+    PPC_FAULT_EXIT  = 1,
+    PPC_FAULT_INST  = 2,
+    PPC_FAULT_MEM   = 3
+};
+
 typedef struct {
     // registers
     uint32_t r[32];
@@ -31,7 +38,7 @@ typedef struct {
     void *ram;
     uint32_t ram_size;
 
-    // FIXME: this flag is set if any error occurs
+    // fault code if execution cannot continue
     uint32_t fault;
 } emul_ppc_state;
 
