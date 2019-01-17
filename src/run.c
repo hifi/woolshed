@@ -28,7 +28,6 @@
 #include <math.h>
 #include <sys/mman.h>
 #include <errno.h>
-#include <byteswap.h>
 #include <dlfcn.h>
 
 #include "pef.h"
@@ -43,7 +42,8 @@ static emul_ppc_state cpu;
 PEFImage pef;
 
 // FIXME: random pointer list to external symbols
-static void *extImports[512];
+typedef void (*ppc_import_t)(emul_ppc_state *);
+static ppc_import_t extImports[512];
 
 int run(int argc, char **argv)
 {
@@ -138,10 +138,10 @@ int run(int argc, char **argv)
 
                 relocAddress += skipCount * 4;
 
-                uint32_t *relocBase = (void *)((uint8_t *)cpu.ram + relocAddress);
+                uint32_t *relocBase = PPC_PTR_INT(&cpu, relocAddress);
                 for (uint16_t i = 0; i < relocCount; i++)
                 {
-                    relocBase[i] = bswap_32(bswap_32(relocBase[i]) + sectionD);
+                    relocBase[i] = PPC_INT(PPC_INT(relocBase[i]) + sectionD);
                     relocAddress += 4;
                 }
             }
@@ -156,31 +156,31 @@ int run(int argc, char **argv)
             else if (opcode == kPEFRelocBySectC)
             {
                 uint16_t runLength = (relocs[i] & 0x1FF) + 1;
-                uint32_t *relocBase = (void *)((uint8_t *)cpu.ram + relocAddress);
+                uint32_t *relocBase = PPC_PTR_INT(&cpu, relocAddress);
 
                 printf("    RelocBySectC * %d\n", runLength);
                 for (uint16_t i = 0; i < runLength; i++)
                 {
-                    relocBase[i] = bswap_32(bswap_32(relocBase[i]) + sectionC);
+                    relocBase[i] = PPC_INT(PPC_INT(relocBase[i]) + sectionC);
                     relocAddress += 4;
                 }
             }
             else if (opcode == kPEFRelocBySectD)
             {
                 uint16_t runLength = (relocs[i] & 0x1FF) + 1;
-                uint32_t *relocBase = (void *)((uint8_t *)cpu.ram + relocAddress);
+                uint32_t *relocBase = PPC_PTR_INT(&cpu, relocAddress);
 
                 printf("    RelocBySectD * %d\n", runLength);
                 for (uint16_t i = 0; i < runLength; i++)
                 {
-                    relocBase[i] = bswap_32(bswap_32(relocBase[i]) + sectionD);
+                    relocBase[i] = PPC_INT(PPC_INT(relocBase[i]) + sectionD);
                     relocAddress += 4;
                 }
             }
             else if (opcode == kPEFRelocImportRun)
             {
                 uint16_t runLength = (relocs[i] & 0x1FF) + 1;
-                uint32_t *relocBase = (void *)((uint8_t *)cpu.ram + relocAddress);
+                uint32_t *relocBase = PPC_PTR_INT(&cpu, relocAddress);
 
                 printf("    RelocImportRun for %d imports\n", runLength);
                 for (uint16_t i = 0; i < runLength; i++)
@@ -206,21 +206,21 @@ int run(int argc, char **argv)
                             printf(" (using stub, %s not found in any lib)\n", buf);
 
                         // real symbol pointers, could be stored in application memory as well
-                        extImports[importIndex] = sym;
+                        extImports[importIndex] = (ppc_import_t)sym;
 
                         // this is a trampoline to run_import with importIndex
                         uint32_t tmp[2];
-                        tmp[0] = bswap_32(importBase + 4); // relocation
-                        tmp[1] = bswap_32((6 << 26) | importIndex); // magic opcode
+                        tmp[0] = PPC_INT(importBase + 4); // relocation
+                        tmp[1] = PPC_INT((6 << 26) | importIndex); // magic opcode
                         memcpy((uint8_t *)cpu.ram + importBase, tmp, sizeof(tmp));
 
-                        relocBase[i] = bswap_32(importBase);
+                        relocBase[i] = PPC_INT(importBase);
                         importBase += sizeof(tmp);
                     } else {
                         printf(" (using memory)\n");
                         // FIXME: these should come from the loaded library so these are dummies and of the wrong size (all words)
                         // however, it seems most programs never use imported variables so might get away with it for a while
-                        relocBase[i] = bswap_32(0x3C00000 + (importIndex * 4));
+                        relocBase[i] = PPC_INT(0x3C00000 + (importIndex * 4));
                     }
                     relocAddress += 4;
                     importIndex++;
@@ -240,24 +240,12 @@ int run(int argc, char **argv)
                 uint16_t runLength = (relocs[i] & 0x1FF) + 1;
                 printf("    RelocTVector8 * %d\n", runLength);
 
-                // FIXME: clean this shit up
-                for (uint16_t i = 0; i < runLength; i++) {
-                    uint32_t tmp = *(uint32_t *)((uint8_t *)cpu.ram + relocAddress);
-                    tmp = bswap32(tmp);
-                    printf("    @ %08X -> %08X + %08X (sectionC)\n", relocAddress, tmp, sectionC);
-                    tmp += sectionC;
-                    tmp = bswap32(tmp);
-                    *(uint32_t *)((uint8_t *)cpu.ram + relocAddress) = tmp;
-
+                for (uint16_t i = 0; i < runLength; i++)
+                {
+                    *PPC_PTR_INT(&cpu, relocAddress) = PPC_INT(PPC_INT(*PPC_PTR_INT(&cpu, relocAddress)) + sectionC);
                     relocAddress += 4;
 
-                    tmp = *(uint32_t *)((uint8_t *)cpu.ram + relocAddress);
-                    tmp = bswap32(tmp);
-                    printf("    @ %08X -> %08X + %08X (sectionD)\n", relocAddress, tmp, sectionD);
-                    tmp += sectionD;
-                    tmp = bswap32(tmp);
-                    *(uint32_t *)((uint8_t *)cpu.ram + relocAddress) = tmp;
-
+                    *PPC_PTR_INT(&cpu, relocAddress) = PPC_INT(PPC_INT(*PPC_PTR_INT(&cpu, relocAddress)) + sectionD);
                     relocAddress += 4;
                 }
             }
@@ -268,15 +256,12 @@ int run(int argc, char **argv)
         }
     }
 
-    uint32_t entryPoint = bswap_32(*(uint32_t *)((uint8_t *)cpu.ram + pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset));
-    // is the TOC offset documented anywhere, it just happens to be here?
-    uint32_t toc = bswap_32(*(uint32_t *)((uint8_t *)cpu.ram + pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset + 4));
-
-    printf("Emulation starting at 0x%08X with TOC at 0x%08X\n", entryPoint, toc);
-
-    cpu.pc = entryPoint;
+    // set cpu state
+    cpu.pc = PPC_INT(*PPC_PTR_INT(&cpu, pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset));
     cpu.r[1] = cpu.ram_size - 0x10000; // FIXME: stack
-    cpu.r[2] = toc;
+    cpu.r[2] = PPC_INT(*PPC_PTR_INT(&cpu, pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset + 4));
+
+    printf("Emulation starting at 0x%08X with TOC at 0x%08X\n", cpu.pc, cpu.r[2]);
 
     while (!cpu.fault) {
         emul_ppc_run(&cpu, 0);
@@ -284,7 +269,7 @@ int run(int argc, char **argv)
         // handle some faults
         if (cpu.fault == PPC_FAULT_INST)
         {
-            uint32_t op = PPC_INT(*(uint32_t *)((uint8_t *)cpu.ram + cpu.pc - 4));
+            uint32_t op = PPC_INT(*PPC_PTR_INT(&cpu, cpu.pc - 4));
             uint32_t primop = op >> 26;
 
             // import call
