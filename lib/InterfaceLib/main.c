@@ -161,3 +161,57 @@ void ppc_Button(emul_ppc_state *cpu)
     FIXME("(...) stub");
     PPC_RETURN_INT(cpu, 1);
 }
+
+void ppc_FlushEvents(emul_ppc_state *cpu)
+{
+    FIXME("(...) stub");
+}
+
+void ppc_GetMainDevice(emul_ppc_state *cpu)
+{
+    FIXME("() stub");
+}
+
+void ppc_SetGDevice(emul_ppc_state *cpu)
+{
+    FIXME("(...) stub");
+}
+
+void ppc_GetCTable(emul_ppc_state *cpu)
+{
+    FIXME("(...) stub");
+}
+
+void ppc_GetIndString(emul_ppc_state *cpu)
+{
+    FIXME("(...) stub");
+}
+
+void ppc_ParamText(emul_ppc_state *cpu)
+{
+    FIXME("(...) stub");
+}
+
+void ppc_GetResource(emul_ppc_state *cpu)
+{
+    FIXME("(...) stub");
+    PPC_RETURN_INT(cpu, 0);
+}
+
+void ppc_GetMBarHeight(emul_ppc_state *cpu)
+{
+    FIXME("() stub");
+    PPC_RETURN_INT(cpu, 8);
+}
+
+void ppc_Alert(emul_ppc_state *cpu)
+{
+    FIXME("(...) stub");
+    PPC_RETURN_INT(cpu, -1);
+}
+
+void ppc_ExitToShell(emul_ppc_state *cpu)
+{
+    FIXME("()");
+    cpu->fault = PPC_FAULT_EXIT;
+}
