@@ -1,34 +1,38 @@
+/*
+ *  Copyright (C) 2019 Toni Spets <toni.spets@iki.fi>
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include <stdint.h>
 #include <byteswap.h>
 
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-
-// FIXME: it would be nice if the whole CPU emulation was using a state struct
-// that could be used to handle syscalls and other fancy things in the calling
-// code rather than emul_ppc calling out, see what Unicorn does? the CPU code
-// should be pluggable enough a better emulator could be used if emul_ppc proves
-// to be too incomplete or slow
-//
-// so in the case of the magic extended opcode 6 it could throw illegal
-// instruction exception that's handled in the calling code by resetting it and
-// reading the custom import address
 typedef struct {
-    void *ram;
-    uint32_t ram_size;
+    // registers
     uint32_t r[32];
     double fr[32];
     uint32_t lr, ctr;
     uint32_t cr, xer;
     uint32_t fpscr;
     uint32_t pc;
+
+    // RAM accessible by the CPU
+    void *ram;
+    uint32_t ram_size;
+
+    // FIXME: this flag is set if any error occurs
+    uint32_t fault;
 } emul_ppc_state;
 
 #define PPC_ARG_INT(cpu, i) (int32_t)cpu->r[2 + i]
@@ -36,11 +40,11 @@ typedef struct {
 #define PPC_ARG_PTR(cpu, i) (void *)((uint8_t *)cpu->ram + cpu->r[2 + i])
 #define PPC_RETURN_INT(cpu, i) cpu->r[3] = (int32_t)i; return;
 
+// FIXME: swap only when host is little endian
+#define PPC_INT64 bswap_64
 #define PPC_INT bswap_32
 #define PPC_SHORT bswap_16
 
-extern void *ram;
-extern uint32_t ram_size;
-void init_emul_ppc(uint32 start, uint32 toc);
-uint32 emul_ppc();
-void emul_ppc_dump();
+void emul_ppc_init(emul_ppc_state *cpu);
+int emul_ppc_run(emul_ppc_state *cpu, int step);
+void emul_ppc_dump(emul_ppc_state *cpu);

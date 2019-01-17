@@ -36,8 +36,9 @@
 #include "common.h"
 #include "emul_ppc.h"
 
-void *ram = NULL;
-uint32_t ram_size = 64*1024*1024; // FIXME: yeah
+// global PPC CPU state
+static emul_ppc_state cpu;
+
 uint32_t import_base = 0x3000000; // FIXME: uh, no
 
 // FIXME: random pointer list to external symbols
@@ -55,7 +56,7 @@ void run_import(uint32_t idx, emul_ppc_state *state)
     {
         PEFSymbolTableEntry *symbol = &pef.symbols[idx];
         const char *symbolName = PEFLoaderString(pef, symbol->s.offset);
-        emul_ppc_dump();
+        emul_ppc_dump(&cpu);
         printf("Import '%s' (%d) missing!\n", symbolName, idx);
         exit(1);
     }
@@ -88,8 +89,12 @@ int run(int argc, char **argv)
     FAIL_IF(pef->tag1.i != PEF_TAG1 || pef->tag2.i != PEF_TAG2, "Invalid PEF header.");
 #endif
 
-    ram = calloc(1, ram_size);
-    printf("  RAM = %p (%d bytes)\n", ram, ram_size);
+    emul_ppc_init(&cpu);
+
+    cpu.ram_size = 64*1024*1024; // FIXME: yeah
+    cpu.ram = calloc(1, cpu.ram_size);
+
+    printf("  RAM = %p (%d bytes)\n", cpu.ram, cpu.ram_size);
 
     printf("\n");
 
@@ -99,7 +104,7 @@ int run(int argc, char **argv)
 
         section->defaultAddress = (i + 1) * 0x1000000; // FIXME: random
 
-        pef_load_section(&pef, i, ram, ram_size);
+        pef_load_section(&pef, i, cpu.ram, cpu.ram_size);
     }
 
     printf("\n");
@@ -151,7 +156,7 @@ int run(int argc, char **argv)
 
                 relocAddress += skipCount * 4;
 
-                uint32_t *relocBase = (void *)((uint8_t *)ram + relocAddress);
+                uint32_t *relocBase = (void *)((uint8_t *)cpu.ram + relocAddress);
                 for (uint16_t i = 0; i < relocCount; i++)
                 {
                     relocBase[i] = bswap_32(bswap_32(relocBase[i]) + sectionD);
@@ -169,7 +174,7 @@ int run(int argc, char **argv)
             else if (opcode == kPEFRelocBySectC)
             {
                 uint16_t runLength = (relocs[i] & 0x1FF) + 1;
-                uint32_t *relocBase = (void *)((uint8_t *)ram + relocAddress);
+                uint32_t *relocBase = (void *)((uint8_t *)cpu.ram + relocAddress);
 
                 printf("    RelocBySectC * %d\n", runLength);
                 for (uint16_t i = 0; i < runLength; i++)
@@ -181,7 +186,7 @@ int run(int argc, char **argv)
             else if (opcode == kPEFRelocBySectD)
             {
                 uint16_t runLength = (relocs[i] & 0x1FF) + 1;
-                uint32_t *relocBase = (void *)((uint8_t *)ram + relocAddress);
+                uint32_t *relocBase = (void *)((uint8_t *)cpu.ram + relocAddress);
 
                 printf("    RelocBySectD * %d\n", runLength);
                 for (uint16_t i = 0; i < runLength; i++)
@@ -193,7 +198,7 @@ int run(int argc, char **argv)
             else if (opcode == kPEFRelocImportRun)
             {
                 uint16_t runLength = (relocs[i] & 0x1FF) + 1;
-                uint32_t *relocBase = (void *)((uint8_t *)ram + relocAddress);
+                uint32_t *relocBase = (void *)((uint8_t *)cpu.ram + relocAddress);
 
                 printf("    RelocImportRun for %d imports\n", runLength);
                 for (uint16_t i = 0; i < runLength; i++)
@@ -226,7 +231,7 @@ int run(int argc, char **argv)
                         tmp[0] = bswap_32(import_base + 4); // relocation
                         tmp[1] = bswap_32((6 << 26) | importIndex); // magic opcode
                         tmp[2] = bswap_32(0x4e800020); // blr so the cpu jumps back
-                        memcpy((uint8_t *)ram + import_base, tmp, sizeof(tmp));
+                        memcpy((uint8_t *)cpu.ram + import_base, tmp, sizeof(tmp));
 
                         relocBase[i] = bswap_32(import_base);
                         import_base += sizeof(tmp);
@@ -256,21 +261,21 @@ int run(int argc, char **argv)
 
                 // FIXME: clean this shit up
                 for (uint16_t i = 0; i < runLength; i++) {
-                    uint32_t tmp = *(uint32_t *)((uint8_t *)ram + relocAddress);
+                    uint32_t tmp = *(uint32_t *)((uint8_t *)cpu.ram + relocAddress);
                     tmp = bswap32(tmp);
                     printf("    @ %08X -> %08X + %08X (sectionC)\n", relocAddress, tmp, sectionC);
                     tmp += sectionC;
                     tmp = bswap32(tmp);
-                    *(uint32_t *)((uint8_t *)ram + relocAddress) = tmp;
+                    *(uint32_t *)((uint8_t *)cpu.ram + relocAddress) = tmp;
 
                     relocAddress += 4;
 
-                    tmp = *(uint32_t *)((uint8_t *)ram + relocAddress);
+                    tmp = *(uint32_t *)((uint8_t *)cpu.ram + relocAddress);
                     tmp = bswap32(tmp);
                     printf("    @ %08X -> %08X + %08X (sectionD)\n", relocAddress, tmp, sectionD);
                     tmp += sectionD;
                     tmp = bswap32(tmp);
-                    *(uint32_t *)((uint8_t *)ram + relocAddress) = tmp;
+                    *(uint32_t *)((uint8_t *)cpu.ram + relocAddress) = tmp;
 
                     relocAddress += 4;
                 }
@@ -282,24 +287,24 @@ int run(int argc, char **argv)
         }
     }
 
-    uint32_t entryPoint = bswap_32(*(uint32_t *)((uint8_t *)ram + pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset));
+    uint32_t entryPoint = bswap_32(*(uint32_t *)((uint8_t *)cpu.ram + pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset));
     // is the TOC offset documented anywhere, it just happens to be here?
-    uint32_t toc = bswap_32(*(uint32_t *)((uint8_t *)ram + pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset + 4));
+    uint32_t toc = bswap_32(*(uint32_t *)((uint8_t *)cpu.ram + pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset + 4));
 
     printf("Emulation starting at 0x%08X with TOC at 0x%08X\n", entryPoint, toc);
-    init_emul_ppc(entryPoint, toc);
 
-    /*
-    uint32_t pc = entryPoint;
-    int step = 0;
-    */
+    cpu.pc = entryPoint;
+    cpu.lr = 0xFFFFFFFF;
+    cpu.r[1] = cpu.ram_size - 0x10000; // FIXME: stack
+    cpu.r[2] = toc;
 
-    for (;;) {
-        /*printf("Dumping step %i at %08X:\n", step, pc);
-        emul_ppc_dump();
-        pc =*/ emul_ppc();
-        /*getchar();
-        step++;*/
+    //int step = 0;
+
+    while (!cpu.fault) {
+        /*printf("Dumping step %i at %08X:\n", step, cpu.pc);
+        emul_ppc_dump(&cpu);*/
+        emul_ppc_run(&cpu, 0);
+        //step++;
     }
 
 cleanup:
