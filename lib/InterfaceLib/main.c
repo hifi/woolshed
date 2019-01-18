@@ -4,29 +4,32 @@
 #include "../src/emul_ppc.h"
 #include "defs.h"
 
-void ppc_GetApplLimit(emul_ppc_state *cpu)
+int ppc_GetApplLimit(emul_ppc_state *cpu)
 {
     uint32_t ret = 0x0130;
     FIXME("() stub -> %08X", ret);
     PPC_RETURN_INT(cpu, ret);
 }
 
-void ppc_SetApplLimit(emul_ppc_state *cpu)
+int ppc_SetApplLimit(emul_ppc_state *cpu)
 {
     FIXME("(%08X) stub", PPC_ARG_INT(cpu, 1));
+    return 0;
 }
 
-void ppc_MaxApplZone(emul_ppc_state *cpu)
+int ppc_MaxApplZone(emul_ppc_state *cpu)
 {
     FIXME("() stub");
+    return 0;
 }
 
-void ppc_MoreMasters(emul_ppc_state *cpu)
+int ppc_MoreMasters(emul_ppc_state *cpu)
 {
     FIXME("() stub");
+    return 0;
 }
 
-void ppc_SysEnvirons(emul_ppc_state *cpu)
+int ppc_SysEnvirons(emul_ppc_state *cpu)
 {
     uint32_t versionRequested = PPC_ARG_INT(cpu, 1);
     SysEnvRec *theWorld = PPC_ARG_PTR(cpu, 2);
@@ -43,7 +46,7 @@ void ppc_SysEnvirons(emul_ppc_state *cpu)
     PPC_RETURN_INT(cpu, 0);
 }
 
-void ppc_InitGraf(emul_ppc_state *cpu)
+int ppc_InitGraf(emul_ppc_state *cpu)
 {
     void *thePort = PPC_ARG_PTR(cpu, 1);
 
@@ -54,46 +57,54 @@ void ppc_InitGraf(emul_ppc_state *cpu)
     memset(qd, 0, sizeof(*qd));
     qd->screenBits.bounds.right = 1024;
     qd->screenBits.bounds.bottom = 768;
+    return 0;
 }
 
-void ppc_InitFonts(emul_ppc_state *cpu)
+int ppc_InitFonts(emul_ppc_state *cpu)
 {
     FIXME("() stub");
+    return 0;
 }
 
-void ppc_InitWindows(emul_ppc_state *cpu)
+int ppc_InitWindows(emul_ppc_state *cpu)
 {
     FIXME("() stub");
+    return 0;
 }
 
-void ppc_InitMenus(emul_ppc_state *cpu)
+int ppc_InitMenus(emul_ppc_state *cpu)
 {
     FIXME("() stub");
+    return 0;
 }
 
-void ppc_TEInit(emul_ppc_state *cpu)
+int ppc_TEInit(emul_ppc_state *cpu)
 {
     FIXME("() stub");
+    return 0;
 }
 
-void ppc_InitDialogs(emul_ppc_state *cpu)
+int ppc_InitDialogs(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_InitCursor(emul_ppc_state *cpu)
+int ppc_InitCursor(emul_ppc_state *cpu)
 {
     FIXME("() stub");
+    return 0;
 }
 
-void ppc_GetDateTime(emul_ppc_state *cpu)
+int ppc_GetDateTime(emul_ppc_state *cpu)
 {
     uint32_t *seconds = PPC_ARG_PTR(cpu, 1);
 
     FIXME("(seconds=%p) stub", (void *)seconds);
+    return 0;
 }
 
-void ppc_InsetRect(emul_ppc_state *cpu)
+int ppc_InsetRect(emul_ppc_state *cpu)
 {
     Rect *r = PPC_ARG_PTR(cpu, 1);
     int16_t dv = PPC_ARG_SHORT(cpu, 2);
@@ -104,114 +115,131 @@ void ppc_InsetRect(emul_ppc_state *cpu)
     INFO("r->left = %d", r->left);
     INFO("r->right = %d", r->right);
     INFO("r->bottom = %d", r->bottom);
+    return 0;
 }
 
-void ppc_NewCWindow(emul_ppc_state *cpu)
+int ppc_NewCWindow(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_SetPort(emul_ppc_state *cpu)
+int ppc_SetPort(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_TextSize(emul_ppc_state *cpu)
+int ppc_TextSize(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_Random(emul_ppc_state *cpu)
+int ppc_Random(emul_ppc_state *cpu)
 {
     FIXME("() stub");
+    return 0;
 }
 
-void ppc_RGBForeColor(emul_ppc_state *cpu)
+int ppc_RGBForeColor(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_SetRect(emul_ppc_state *cpu)
+int ppc_SetRect(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_MoveTo(emul_ppc_state *cpu)
+int ppc_MoveTo(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_PaintOval(emul_ppc_state *cpu)
+int ppc_PaintOval(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_InvertColor(emul_ppc_state *cpu)
+int ppc_InvertColor(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_DrawString(emul_ppc_state *cpu)
+int ppc_DrawString(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_Button(emul_ppc_state *cpu)
+int ppc_Button(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
     PPC_RETURN_INT(cpu, 1);
 }
 
-void ppc_FlushEvents(emul_ppc_state *cpu)
+int ppc_FlushEvents(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_GetMainDevice(emul_ppc_state *cpu)
+int ppc_GetMainDevice(emul_ppc_state *cpu)
 {
     FIXME("() stub");
+    return 0;
 }
 
-void ppc_SetGDevice(emul_ppc_state *cpu)
+int ppc_SetGDevice(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_GetCTable(emul_ppc_state *cpu)
+int ppc_GetCTable(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_GetIndString(emul_ppc_state *cpu)
+int ppc_GetIndString(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_ParamText(emul_ppc_state *cpu)
+int ppc_ParamText(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    return 0;
 }
 
-void ppc_GetResource(emul_ppc_state *cpu)
+int ppc_GetResource(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
     PPC_RETURN_INT(cpu, 0);
 }
 
-void ppc_GetMBarHeight(emul_ppc_state *cpu)
+int ppc_GetMBarHeight(emul_ppc_state *cpu)
 {
     FIXME("() stub");
     PPC_RETURN_INT(cpu, 8);
 }
 
-void ppc_Alert(emul_ppc_state *cpu)
+int ppc_Alert(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
     PPC_RETURN_INT(cpu, -1);
 }
 
-void ppc_ExitToShell(emul_ppc_state *cpu)
+int ppc_ExitToShell(emul_ppc_state *cpu)
 {
     FIXME("()");
-    cpu->fault = PPC_FAULT_EXIT;
+    return 1;
 }

@@ -20,9 +20,8 @@
 
 enum {
     PPC_FAULT_NONE  = 0,
-    PPC_FAULT_EXIT  = 1,
-    PPC_FAULT_INST  = 2,
-    PPC_FAULT_MEM   = 3
+    PPC_FAULT_INST  = 1,
+    PPC_FAULT_MEM   = 2
 };
 
 typedef struct {
@@ -37,9 +36,6 @@ typedef struct {
     // RAM accessible by the CPU
     void *ram;
     uint32_t ram_size;
-
-    // fault code if execution cannot continue
-    uint32_t fault;
 } emul_ppc_state;
 
 #define PPC_PTR_INT(cpu, addr) (uint32_t *)((uint8_t *)(cpu)->ram + (addr))
@@ -47,7 +43,7 @@ typedef struct {
 #define PPC_ARG_INT(cpu, i) (int32_t)cpu->r[2 + i]
 #define PPC_ARG_SHORT(cpu, i) (int16_t)cpu->r[2 + i]
 #define PPC_ARG_PTR(cpu, i) (void *)((uint8_t *)cpu->ram + cpu->r[2 + i])
-#define PPC_RETURN_INT(cpu, i) cpu->r[3] = (int32_t)i; return;
+#define PPC_RETURN_INT(cpu, i) { cpu->r[3] = (int32_t)i; return 0; }
 
 // FIXME: swap only when host is little endian
 #define PPC_INT64 bswap_64

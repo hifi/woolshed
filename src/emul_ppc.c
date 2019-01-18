@@ -107,88 +107,88 @@ creqv
 // Convert 8-bit field mask (e.g. mtcrf) to bit mask
 static uint32_t field2mask[256];
 
-static inline uint8_t ReadMacInt8(emul_ppc_state *cpu, uint32_t addr)
+static inline uint8_t ReadMacInt8(emul_ppc_state *cpu, uint32_t addr, int *fault)
 {
     if (addr > cpu->ram_size)
     {
-        cpu->fault = PPC_FAULT_MEM;
+        *fault = PPC_FAULT_MEM;
         return 0;
     }
 
     return *((uint8_t *)cpu->ram + addr);
 }
 
-static inline uint16_t ReadMacInt16(emul_ppc_state *cpu, uint32_t addr)
+static inline uint16_t ReadMacInt16(emul_ppc_state *cpu, uint32_t addr, int *fault)
 {
     if (addr > cpu->ram_size)
     {
-        cpu->fault = PPC_FAULT_MEM;
+        *fault = PPC_FAULT_MEM;
         return 0;
     }
 
     return PPC_SHORT(*(uint16_t *)((uint8_t *)cpu->ram + addr));
 }
 
-static inline uint32_t ReadMacInt32(emul_ppc_state *cpu, uint32_t addr)
+static inline uint32_t ReadMacInt32(emul_ppc_state *cpu, uint32_t addr, int *fault)
 {
     if (addr > cpu->ram_size)
     {
-        cpu->fault = PPC_FAULT_MEM;
+        *fault = PPC_FAULT_MEM;
         return 0;
     }
 
     return PPC_INT(*(uint32_t *)((uint8_t *)cpu->ram + addr));
 }
 
-static inline uint64_t ReadMacInt64(emul_ppc_state *cpu, uint32_t addr)
+static inline uint64_t ReadMacInt64(emul_ppc_state *cpu, uint32_t addr, int *fault)
 {
     if (addr > cpu->ram_size)
     {
-        cpu->fault = PPC_FAULT_MEM;
+        *fault = PPC_FAULT_MEM;
         return 0;
     }
 
     return PPC_INT64(*(uint64_t *)((uint8_t *)cpu->ram + addr));
 }
 
-static inline void WriteMacInt8(emul_ppc_state *cpu, uint32_t addr, uint8_t val)
+static inline void WriteMacInt8(emul_ppc_state *cpu, uint32_t addr, uint8_t val, int *fault)
 {
     if (addr > cpu->ram_size)
     {
-        cpu->fault = PPC_FAULT_MEM;
+        *fault = PPC_FAULT_MEM;
         return;
     }
 
     *((uint8_t *)cpu->ram + addr) = val;
 }
 
-static inline void WriteMacInt16(emul_ppc_state *cpu, uint32_t addr, uint16_t val)
+static inline void WriteMacInt16(emul_ppc_state *cpu, uint32_t addr, uint16_t val, int *fault)
 {
     if (addr > cpu->ram_size)
     {
-        cpu->fault = PPC_FAULT_MEM;
+        *fault = PPC_FAULT_MEM;
         return;
     }
 
     *(uint16_t *)((uint8_t *)cpu->ram + addr) = PPC_SHORT(val);
 }
 
-static inline void WriteMacInt32(emul_ppc_state *cpu, uint32_t addr, uint32_t val)
+static inline void WriteMacInt32(emul_ppc_state *cpu, uint32_t addr, uint32_t val, int *fault)
 {
     if (addr > cpu->ram_size)
     {
-        cpu->fault = PPC_FAULT_MEM;
+        *fault = PPC_FAULT_MEM;
         return;
     }
 
     *(uint32_t *)((uint8_t *)cpu->ram + addr) = PPC_INT(val);
 }
 
-static inline void WriteMacInt64(emul_ppc_state *cpu, uint32_t addr, uint64_t val)
+static inline void WriteMacInt64(emul_ppc_state *cpu, uint32_t addr, uint64_t val, int *fault)
 {
     if (addr > cpu->ram_size)
     {
-        cpu->fault = PPC_FAULT_MEM;
+        *fault = PPC_FAULT_MEM;
         return;
     }
 
@@ -271,11 +271,13 @@ static uint32_t mbme2mask(uint32_t op)
  *  Emulate instruction with primary opcode = 19
  */
 
-static void emul19(emul_ppc_state *cpu, uint32_t op)
+static int emul19(emul_ppc_state *cpu, uint32_t op)
 {
     uint32_t exop = (op >> 1) & 0x3ff;
     uint32_t rd = (op >> 21) & 0x1f;
     uint32_t ra = (op >> 16) & 0x1f;
+    int fault = PPC_FAULT_NONE;
+
     switch (exop) {
 
         case 0: {    // mcrf
@@ -399,9 +401,11 @@ bctr_nobranch:
         }
 
         default:
-            cpu->fault = PPC_FAULT_INST;
+            fault = PPC_FAULT_INST;
             break;
     }
+
+    return fault;
 }
 
 
@@ -409,12 +413,14 @@ bctr_nobranch:
  *  Emulate instruction with primary opcode = 31
  */
 
-static void emul31(emul_ppc_state *cpu, uint32_t op)
+static int emul31(emul_ppc_state *cpu, uint32_t op)
 {
     uint32_t exop = (op >> 1) & 0x3ff;
     uint32_t rd = (op >> 21) & 0x1f;
     uint32_t ra = (op >> 16) & 0x1f;
     uint32_t rb = (op >> 11) & 0x1f;
+    int fault = PPC_FAULT_NONE;
+
     switch (exop) {
 
         case 0:    {    // cmpw
@@ -461,12 +467,12 @@ static void emul31(emul_ppc_state *cpu, uint32_t op)
             break;
 
         case 20:    // lwarx
-            cpu->r[rd] = ReadMacInt32(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0));
+            cpu->r[rd] = ReadMacInt32(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), &fault);
             //!! set reservation bit
             break;
 
         case 23:    // lwzx
-            cpu->r[rd] = ReadMacInt32(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0));
+            cpu->r[rd] = ReadMacInt32(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), &fault);
             break;
 
         case 24:    // slw
@@ -518,7 +524,7 @@ cntlzw_done:if (op & 1)
 
         case 55:    // lwzux
             cpu->r[ra] += cpu->r[rb];
-            cpu->r[rd] = ReadMacInt32(cpu, cpu->r[ra]);
+            cpu->r[rd] = ReadMacInt32(cpu, cpu->r[ra], &fault);
             break;
 
         case 60:    // andc
@@ -537,7 +543,7 @@ cntlzw_done:if (op & 1)
             break;
 
         case 87:    // lbzx
-            cpu->r[rd] = ReadMacInt8(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0));
+            cpu->r[rd] = ReadMacInt8(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), &fault);
             break;
 
         case 104:    // neg
@@ -551,7 +557,7 @@ cntlzw_done:if (op & 1)
 
         case 119:    // lbzux
             cpu->r[ra] += cpu->r[rb];
-            cpu->r[rd] = ReadMacInt8(cpu, cpu->r[ra]);
+            cpu->r[rd] = ReadMacInt8(cpu, cpu->r[ra], &fault);
             break;
 
         case 124:    // nor
@@ -596,17 +602,17 @@ cntlzw_done:if (op & 1)
 
         case 150:    // stwcx
             //!! check reserved bit
-            WriteMacInt32(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), cpu->r[rd]);
+            WriteMacInt32(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), cpu->r[rd], &fault);
             record(cpu,0);
             break;
 
         case 151:    // stwx
-            WriteMacInt32(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), cpu->r[rd]);
+            WriteMacInt32(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), cpu->r[rd], &fault);
             break;
 
         case 183:    // stwux
             cpu->r[ra] += cpu->r[rb];
-            WriteMacInt32(cpu, cpu->r[ra], cpu->r[rd]);
+            WriteMacInt32(cpu, cpu->r[ra], cpu->r[rd], &fault);
             break;
 
         case 202: {  // addze
@@ -625,7 +631,7 @@ cntlzw_done:if (op & 1)
         }
 
         case 215:    // stbx
-            WriteMacInt8(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), cpu->r[rd]);
+            WriteMacInt8(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), cpu->r[rd], &fault);
             break;
 
         case 235:    // mullw
@@ -636,7 +642,7 @@ cntlzw_done:if (op & 1)
 
         case 247:    // stbux
             cpu->r[ra] += cpu->r[rb];
-            WriteMacInt8(cpu, cpu->r[ra], cpu->r[rd]);
+            WriteMacInt8(cpu, cpu->r[ra], cpu->r[rd], &fault);
             break;
 
         case 266:    // add
@@ -646,7 +652,7 @@ cntlzw_done:if (op & 1)
             break;
 
         case 279:    // lhzx
-            cpu->r[rd] = ReadMacInt16(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0));
+            cpu->r[rd] = ReadMacInt16(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), &fault);
             break;
 
         case 284:    // eqv
@@ -657,7 +663,7 @@ cntlzw_done:if (op & 1)
 
         case 311:    // lhzux
             cpu->r[ra] += cpu->r[rb];
-            cpu->r[rd] = ReadMacInt16(cpu, cpu->r[ra]);
+            cpu->r[rd] = ReadMacInt16(cpu, cpu->r[ra], &fault);
             break;
 
         case 316:    // xor
@@ -673,13 +679,13 @@ cntlzw_done:if (op & 1)
                 case 8: cpu->r[rd] = cpu->lr; break;
                 case 9: cpu->r[rd] = cpu->ctr; break;
                 default:
-                    cpu->fault = PPC_FAULT_INST;
+                    fault = PPC_FAULT_INST;
             }
             break;
         }
 
         case 343:    // lhax
-            cpu->r[rd] = (int32_t)(int16_t)ReadMacInt16(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0));
+            cpu->r[rd] = (int32_t)(int16_t)ReadMacInt16(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), &fault);
             break;
 
         case 371:    // mftb
@@ -688,11 +694,11 @@ cntlzw_done:if (op & 1)
 
         case 375:    // lhaux
             cpu->r[ra] += cpu->r[rb];
-            cpu->r[rd] = (int32_t)(int16_t)ReadMacInt16(cpu, cpu->r[ra]);
+            cpu->r[rd] = (int32_t)(int16_t)ReadMacInt16(cpu, cpu->r[ra], &fault);
             break;
 
         case 407:    // sthx
-            WriteMacInt16(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), cpu->r[rd]);
+            WriteMacInt16(cpu, cpu->r[rb] + (ra ? cpu->r[ra] : 0), cpu->r[rd], &fault);
             break;
 
         case 412:    // orc
@@ -703,7 +709,7 @@ cntlzw_done:if (op & 1)
 
         case 439:    // sthux
             cpu->r[ra] += cpu->r[rb];
-            WriteMacInt16(cpu, cpu->r[ra], cpu->r[rd]);
+            WriteMacInt16(cpu, cpu->r[ra], cpu->r[rd], &fault);
             break;
 
         case 444:    // or
@@ -726,7 +732,7 @@ cntlzw_done:if (op & 1)
                 case 8: cpu->lr = cpu->r[rd]; break;
                 case 9: cpu->ctr = cpu->r[rd]; break;
                 default:
-                    cpu->fault = PPC_FAULT_INST;
+                    fault = PPC_FAULT_INST;
             }
             break;
         }
@@ -785,16 +791,16 @@ cntlzw_done:if (op & 1)
             for (int i=0; i<nb; i++) {
                 switch (i & 3) {
                     case 0:
-                        cpu->r[reg] = ReadMacInt8(cpu, addr + i) << 24;
+                        cpu->r[reg] = ReadMacInt8(cpu, addr + i, &fault) << 24;
                         break;
                     case 1:
-                        cpu->r[reg] = (cpu->r[reg] & 0xff00ffff) | (ReadMacInt8(cpu, addr + i) << 16);
+                        cpu->r[reg] = (cpu->r[reg] & 0xff00ffff) | (ReadMacInt8(cpu, addr + i, &fault) << 16);
                         break;
                     case 2:
-                        cpu->r[reg] = (cpu->r[reg] & 0xffff00ff) | (ReadMacInt8(cpu, addr + i) << 8);
+                        cpu->r[reg] = (cpu->r[reg] & 0xffff00ff) | (ReadMacInt8(cpu, addr + i, &fault) << 8);
                         break;
                     case 3:
-                        cpu->r[reg] = (cpu->r[reg] & 0xffffff00) | ReadMacInt8(cpu, addr + i);
+                        cpu->r[reg] = (cpu->r[reg] & 0xffffff00) | ReadMacInt8(cpu, addr + i, &fault);
                         reg = (reg + 1) & 0x1f;
                         break;
                 }
@@ -815,16 +821,16 @@ cntlzw_done:if (op & 1)
             for (int i=0; i<nb; i++) {
                 switch (i & 3) {
                     case 0:
-                        cpu->r[reg] = ReadMacInt8(cpu, addr + i) << 24;
+                        cpu->r[reg] = ReadMacInt8(cpu, addr + i, &fault) << 24;
                         break;
                     case 1:
-                        cpu->r[reg] = (cpu->r[reg] & 0xff00ffff) | (ReadMacInt8(cpu, addr + i) << 16);
+                        cpu->r[reg] = (cpu->r[reg] & 0xff00ffff) | (ReadMacInt8(cpu, addr + i, &fault) << 16);
                         break;
                     case 2:
-                        cpu->r[reg] = (cpu->r[reg] & 0xffff00ff) | (ReadMacInt8(cpu, addr + i) << 8);
+                        cpu->r[reg] = (cpu->r[reg] & 0xffff00ff) | (ReadMacInt8(cpu, addr + i, &fault) << 8);
                         break;
                     case 3:
-                        cpu->r[reg] = (cpu->r[reg] & 0xffffff00) | ReadMacInt8(cpu, addr + i);
+                        cpu->r[reg] = (cpu->r[reg] & 0xffffff00) | ReadMacInt8(cpu, addr + i, &fault);
                         reg = (reg + 1) & 0x1f;
                         break;
                 }
@@ -879,7 +885,7 @@ cntlzw_done:if (op & 1)
             int reg = rd;
             int shift = 24;
             for (int i=0; i<nb; i++) {
-                WriteMacInt8(cpu, addr + i, (cpu->r[reg] >> shift));
+                WriteMacInt8(cpu, addr + i, (cpu->r[reg] >> shift), &fault);
                 shift -= 8;
                 if ((i & 3) == 3) {
                     shift = 24;
@@ -895,7 +901,7 @@ cntlzw_done:if (op & 1)
             int reg = rd;
             int shift = 24;
             for (int i=0; i<nb; i++) {
-                WriteMacInt8(cpu, addr + i, (cpu->r[reg] >> shift));
+                WriteMacInt8(cpu, addr + i, (cpu->r[reg] >> shift), &fault);
                 shift -= 8;
                 if ((i & 3) == 3) {
                     shift = 24;
@@ -979,9 +985,11 @@ cntlzw_done:if (op & 1)
 #endif
 
         default:
-            cpu->fault = PPC_FAULT_INST;
+            fault = PPC_FAULT_INST;
             break;
     }
+
+    return fault;
 }
 
 
@@ -989,13 +997,12 @@ cntlzw_done:if (op & 1)
  *  Emulate instruction with primary opcode = 59
  */
 
-static void emul59(emul_ppc_state *cpu, uint32_t op)
+static int emul59(emul_ppc_state *cpu, uint32_t op)
 {
     uint32_t exop = (op >> 1) & 0x3ff;
     switch (exop) {
         default:
-            cpu->fault = PPC_FAULT_INST;
-            break;
+            return PPC_FAULT_INST;
     }
 }
 
@@ -1004,7 +1011,7 @@ static void emul59(emul_ppc_state *cpu, uint32_t op)
  *  Emulate instruction with primary opcode = 63
  */
 
-static void emul63(emul_ppc_state *cpu, uint32_t op)
+static int emul63(emul_ppc_state *cpu, uint32_t op)
 {
     uint32_t exop = (op >> 1) & 0x3ff;
     uint32_t rd = (op >> 21) & 0x1f;
@@ -1028,9 +1035,10 @@ static void emul63(emul_ppc_state *cpu, uint32_t op)
             break;
 
         default:
-            cpu->fault = PPC_FAULT_INST;
-            break;
+            return PPC_FAULT_INST;
     }
+
+    return PPC_FAULT_NONE;
 }
 
 
@@ -1040,10 +1048,15 @@ static void emul63(emul_ppc_state *cpu, uint32_t op)
 
 int emul_ppc_run(emul_ppc_state *cpu, int step)
 {
-    while (!cpu->fault) {
-        uint32_t op = ReadMacInt32(cpu, cpu->pc);
+    int fault = PPC_FAULT_NONE;
+
+    while (fault == PPC_FAULT_NONE) {
+        uint32_t op = ReadMacInt32(cpu, cpu->pc, &fault);
         uint32_t primop = op >> 26;
         cpu->pc += 4;
+
+        if (fault != PPC_FAULT_NONE)
+            break;
 
         switch (primop) {
 
@@ -1185,7 +1198,7 @@ bc_nobranch:
             }
 
             case 19:
-                emul19(cpu, op);
+                fault = emul19(cpu, op);
                 break;
 
             case 20: {    // rlwimi
@@ -1264,13 +1277,13 @@ bc_nobranch:
             }
 
             case 31:
-                emul31(cpu, op);
+                fault = emul31(cpu, op);
                 break;
 
             case 32: {    // lwz
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
-                cpu->r[rd] = ReadMacInt32(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0));
+                cpu->r[rd] = ReadMacInt32(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), &fault);
                 break;
             }
 
@@ -1278,14 +1291,14 @@ bc_nobranch:
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
                 cpu->r[ra] += (int16_t)(op & 0xffff);
-                cpu->r[rd] = ReadMacInt32(cpu, cpu->r[ra]);
+                cpu->r[rd] = ReadMacInt32(cpu, cpu->r[ra], &fault);
                 break;
             }
 
             case 34: {    // lbz
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
-                cpu->r[rd] = ReadMacInt8(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0));
+                cpu->r[rd] = ReadMacInt8(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), &fault);
                 break;
             }
 
@@ -1293,14 +1306,14 @@ bc_nobranch:
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
                 cpu->r[ra] += (int16_t)(op & 0xffff);
-                cpu->r[rd] = ReadMacInt8(cpu, cpu->r[ra]);
+                cpu->r[rd] = ReadMacInt8(cpu, cpu->r[ra], &fault);
                 break;
             }
 
             case 36: {    // stw
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
-                WriteMacInt32(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), cpu->r[rd]);
+                WriteMacInt32(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), cpu->r[rd], &fault);
                 break;
             }
 
@@ -1308,14 +1321,14 @@ bc_nobranch:
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
                 cpu->r[ra] += (int16_t)(op & 0xffff);
-                WriteMacInt32(cpu, cpu->r[ra], cpu->r[rd]);
+                WriteMacInt32(cpu, cpu->r[ra], cpu->r[rd], &fault);
                 break;
             }
 
             case 38: {    // stb
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
-                WriteMacInt8(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), cpu->r[rd]);
+                WriteMacInt8(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), cpu->r[rd], &fault);
                 break;
             }
 
@@ -1323,14 +1336,14 @@ bc_nobranch:
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
                 cpu->r[ra] += (int16_t)(op & 0xffff);
-                WriteMacInt8(cpu, cpu->r[ra], cpu->r[rd]);
+                WriteMacInt8(cpu, cpu->r[ra], cpu->r[rd], &fault);
                 break;
             }
 
             case 40: {    // lhz
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
-                cpu->r[rd] = ReadMacInt16(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0));
+                cpu->r[rd] = ReadMacInt16(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), &fault);
                 break;
             }
 
@@ -1338,14 +1351,14 @@ bc_nobranch:
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
                 cpu->r[ra] += (int16_t)(op & 0xffff);
-                cpu->r[rd] = ReadMacInt16(cpu, cpu->r[ra]);
+                cpu->r[rd] = ReadMacInt16(cpu, cpu->r[ra], &fault);
                 break;
             }
 
             case 42: {    // lha
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
-                cpu->r[rd] = (int32_t)(int16_t)ReadMacInt16(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0));
+                cpu->r[rd] = (int32_t)(int16_t)ReadMacInt16(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), &fault);
                 break;
             }
 
@@ -1353,14 +1366,14 @@ bc_nobranch:
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
                 cpu->r[ra] += (int16_t)(op & 0xffff);
-                cpu->r[rd] = (int32_t)(int16_t)ReadMacInt16(cpu, cpu->r[ra]);
+                cpu->r[rd] = (int32_t)(int16_t)ReadMacInt16(cpu, cpu->r[ra], &fault);
                 break;
             }
 
             case 44: {    // sth
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
-                WriteMacInt16(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), cpu->r[rd]);
+                WriteMacInt16(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), cpu->r[rd], &fault);
                 break;
             }
 
@@ -1368,7 +1381,7 @@ bc_nobranch:
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
                 cpu->r[ra] += (int16_t)(op & 0xffff);
-                WriteMacInt16(cpu, cpu->r[ra], cpu->r[rd]);
+                WriteMacInt16(cpu, cpu->r[ra], cpu->r[rd], &fault);
                 break;
             }
 
@@ -1377,7 +1390,7 @@ bc_nobranch:
                 uint32_t ra = (op >> 16) & 0x1f;
                 uint32_t addr = (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0);
                 while (rd <= 31) {
-                    cpu->r[rd] = ReadMacInt32(cpu, addr);
+                    cpu->r[rd] = ReadMacInt32(cpu, addr, &fault);
                     rd++;
                     addr += 4;
                 }
@@ -1389,7 +1402,7 @@ bc_nobranch:
                 uint32_t ra = (op >> 16) & 0x1f;
                 uint32_t addr = (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0);
                 while (rd <= 31) {
-                    WriteMacInt32(cpu, addr, cpu->r[rd]);
+                    WriteMacInt32(cpu, addr, cpu->r[rd], &fault);
                     rd++;
                     addr += 4;
                 }
@@ -1399,35 +1412,35 @@ bc_nobranch:
             case 50: {    // lfd
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
-                cpu->fr[rd] = (double)ReadMacInt64(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0));
+                cpu->fr[rd] = (double)ReadMacInt64(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), &fault);
                 break;
             }
 
             case 54: {    // stfd
                 uint32_t rd = (op >> 21) & 0x1f;
                 uint32_t ra = (op >> 16) & 0x1f;
-                WriteMacInt64(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), (uint64_t)cpu->fr[rd]);
+                WriteMacInt64(cpu, (int16_t)(op & 0xffff) + (ra ? cpu->r[ra] : 0), (uint64_t)cpu->fr[rd], &fault);
                 break;
             }
 
             case 59:
-                emul59(cpu, op);
+                fault = emul59(cpu, op);
                 break;
 
             case 63:
-                emul63(cpu, op);
+                fault = emul63(cpu, op);
                 break;
 
             default:
-                cpu->fault = PPC_FAULT_INST;
+                fault = PPC_FAULT_INST;
                 break;
         }
 
         if (step)
-            return !cpu->fault;
+            break;
     }
 
-    return 0;
+    return fault;
 }
 
 void emul_ppc_init(emul_ppc_state *cpu)
@@ -1451,5 +1464,4 @@ void emul_ppc_init(emul_ppc_state *cpu)
     cpu->lr = cpu->ctr = 0;
     cpu->cr = cpu->xer = 0;
     cpu->fpscr = 0;
-    cpu->fault = 0;
 }

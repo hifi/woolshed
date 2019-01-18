@@ -5,7 +5,7 @@
 #include "debug.h"
 
 // FIXME: how to properly handle varargs?
-void ppc_printf(emul_ppc_state *cpu)
+int ppc_printf(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
 
@@ -16,14 +16,14 @@ void ppc_printf(emul_ppc_state *cpu)
     PPC_RETURN_INT(cpu, 0);
 }
 
-void ppc___setjmp(emul_ppc_state *cpu)
+int ppc___setjmp(emul_ppc_state *cpu)
 {
     FIXME("() stub");
     PPC_RETURN_INT(cpu, 0);
 }
 
-void ppc_exit(emul_ppc_state *cpu)
+int ppc_exit(emul_ppc_state *cpu)
 {
     INFO("()");
-    cpu->fault = PPC_FAULT_EXIT;
+    return 1;
 }

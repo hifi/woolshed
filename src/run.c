@@ -42,7 +42,7 @@ static emul_ppc_state cpu;
 PEFImage pef;
 
 // FIXME: random pointer list to external symbols
-typedef void (*ppc_import_t)(emul_ppc_state *);
+typedef int (*ppc_import_t)(emul_ppc_state *);
 static ppc_import_t extImports[512];
 
 int run(int argc, char **argv)
@@ -263,49 +263,47 @@ int run(int argc, char **argv)
 
     printf("Emulation starting at 0x%08X with TOC at 0x%08X\n", cpu.pc, cpu.r[2]);
 
-    while (!cpu.fault) {
-        emul_ppc_run(&cpu, 0);
-
+    for (int fault; (fault = emul_ppc_run(&cpu, 0));)
+    {
         // handle some faults
-        if (cpu.fault == PPC_FAULT_INST)
+        if (fault == PPC_FAULT_INST)
         {
             uint32_t op = PPC_INT(*PPC_PTR_INT(&cpu, cpu.pc - 4));
             uint32_t primop = op >> 26;
 
             // import call
-            if (primop == 6) {
+            if (primop == 6)
+            {
                 uint32_t idx = (op & 0x3FFFFFF);
-                void (*importFunc)(emul_ppc_state *) = extImports[idx];
+                int (*importFunc)(emul_ppc_state *) = extImports[idx];
 
                 if (!importFunc)
                 {
                     PEFSymbolTableEntry *symbol = &pef.symbols[idx];
                     const char *symbolName = PEFLoaderString(pef, symbol->s.offset);
-                    emul_ppc_dump(&cpu);
                     printf("PPC: Import '%s' (%d) missing!\n", symbolName, idx);
                     break;
                 }
 
-                importFunc(&cpu);
-
-                if (cpu.fault == PPC_FAULT_EXIT)
+                if (importFunc(&cpu))
+                {
+                    printf("PPC: Import function requested exit.\n");
                     break;
+                }
 
                 cpu.pc = cpu.lr;
-                cpu.fault = PPC_FAULT_NONE;
-            } else {
+            }
+            else
+            {
                 fprintf(stderr, "PPC: Unhandled instruction at %08X\n", cpu.pc - 4);
                 emul_ppc_dump(&cpu);
                 break;
             }
         }
-        else if (cpu.fault == PPC_FAULT_MEM)
+        else if (fault == PPC_FAULT_MEM)
         {
             fprintf(stderr, "PPC: Address outside RAM at %08X\n", cpu.pc - 4);
             emul_ppc_dump(&cpu);
-            break;
-        }
-        else if (cpu.fault == PPC_FAULT_EXIT) {
             break;
         }
     }
