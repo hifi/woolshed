@@ -249,6 +249,17 @@ int run(int argc, char **argv)
                     relocAddress += 4;
                 }
             }
+            else if (opcode == kPEFRelocVTable8)
+            {
+                uint16_t runLength = (relocs[i] & 0x1FF) + 1;
+                printf("    RelocVTable8 * %d\n", runLength);
+
+                for (uint16_t i = 0; i < runLength; i++)
+                {
+                    *PPC_PTR_INT(&cpu, relocAddress) = PPC_INT(PPC_INT(*PPC_PTR_INT(&cpu, relocAddress)) + sectionD);
+                    relocAddress += 8;
+                }
+            }
             else
             {
                 printf("Warning: Unhandled relocation instruction 0x%02X\n", opcode);
