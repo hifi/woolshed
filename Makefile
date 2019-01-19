@@ -10,9 +10,9 @@ else
 CFLAGS  += -O2
 endif
 
-PEFTOOL            ?= peftool
-PEFTOOL_SRC         = $(wildcard src/*.c)
-PEFTOOL_HDR         = $(wildcard src/*.h)
+WOOLSHED           ?= woolshed
+WOOLSHED_SRC        = $(wildcard src/*.c)
+WOOLSHED_HDR        = $(wildcard src/*.h)
 
 STDCLIB            ?= StdCLib.so
 STDCLIB_SRC         = $(wildcard lib/StdCLib/*.c)
@@ -26,10 +26,10 @@ MATHLIB            ?= MathLib.so
 MATHLIB_SRC         = $(wildcard lib/MathLib/*.c)
 MATHLIB_HDR         = $(wildcard lib/MathLib/*.h) src/debug.h
 
-all: $(PEFTOOL) $(STDCLIB) $(INTERFACELIB) $(MATHLIB)
+all: $(WOOLSHED) $(STDCLIB) $(INTERFACELIB) $(MATHLIB)
 
-$(PEFTOOL): $(PEFTOOL_SRC) $(PEFTOOL_HDR)
-	$(CC) $(CFLAGS) -o $@ $(PEFTOOL_SRC) -lm -ldl
+$(WOOLSHED): $(WOOLSHED_SRC) $(WOOLSHED_HDR)
+	$(CC) $(CFLAGS) -o $@ $(WOOLSHED_SRC) -lm -ldl
 
 $(STDCLIB): $(STDCLIB_SRC) $(STDCLIB_HDR)
 	$(CC) -shared $(CFLAGS) -o $@ $(STDCLIB_SRC)
@@ -42,4 +42,4 @@ $(MATHLIB): $(MATHLIB_SRC) $(MATHLIB_HDR)
 
 .PHONY: clean
 clean:
-	$(RM) $(PEFTOOL) $(STDCLIB) $(INTERFACELIB) $(MATHLIB)
+	$(RM) $(WOOLSHED) $(STDCLIB) $(INTERFACELIB) $(MATHLIB)

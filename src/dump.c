@@ -38,7 +38,7 @@ int dump(int argc, char **argv)
     FILE   *fh    = NULL;
     int8_t *image = NULL;
 
-    FAIL_IF(argc < 2, "usage: peftool dump <image>\n");
+    FAIL_IF(argc < 2, "usage: woolshed dump <image>\n");
 
     uint32_t length;
     FAIL_IF_SILENT(open_and_read(&fh, &image, &length, argv[1], "rb"));

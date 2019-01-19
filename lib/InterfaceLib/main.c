@@ -71,7 +71,7 @@ int ppc_InitGraf(emul_ppc_state *cpu)
     qd->screenBits.bounds.right = PPC_SHORT(1024);
     qd->screenBits.bounds.bottom = PPC_SHORT(768);
 
-    FIXME("Setting screen size to %dx%d", qd->screenBits.bounds.right, qd->screenBits.bounds.bottom);
+    FIXME("Setting screen size to %dx%d", PPC_SHORT(qd->screenBits.bounds.right), PPC_SHORT(qd->screenBits.bounds.bottom));
     return 0;
 }
 

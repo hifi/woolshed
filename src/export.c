@@ -39,7 +39,7 @@ int export(int argc, char **argv)
     int8_t *image = NULL;
     int32_t sect_num = 0;
 
-    FAIL_IF(argc < 3, "usage: peftool export <image> <section number>\n");
+    FAIL_IF(argc < 3, "usage: woolshed export <image> <section number>\n");
 
     sect_num = atoi(argv[2]);
 

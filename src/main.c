@@ -26,8 +26,8 @@ int run(int argc, char **argv);
 
 void help(char *progname)
 {
-    fprintf(stderr, "peftool git~%s (c) 2019 Toni Spets\n", REV);
-    fprintf(stderr, "https://github.com/hifi/peftool\n\n");
+    fprintf(stderr, "woolshed git~%s (c) 2019 Toni Spets\n", REV);
+    fprintf(stderr, "https://github.com/hifi/woolshed\n\n");
     fprintf(stderr, "usage: %s <command> [args ...]\n\n", progname);
     fprintf(stderr, "commands:"                                                 "\n"
             "    dump   -- dump information about section of executable"        "\n"
