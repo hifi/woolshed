@@ -2,6 +2,11 @@
 
 #pragma pack(push, 1)
 typedef struct {
+    uint8_t len;
+    char str[];
+} Str255;
+
+typedef struct {
     uint16_t environsVersion;
     uint16_t machineType;
     uint16_t systemVersion;
@@ -47,33 +52,24 @@ typedef struct {
     uint8_t pat[8];
 } Pattern;
 
-#if 0
-typedef struct {
-    uint32_t thePort;
-    Pattern white;
-    Pattern black;
-    Pattern gray;
-    Pattern ltGray;
-    Pattern dkGray;
-    Cursor arrow;
-    BitMap screenBits;
-    uint32_t randSeed;
-    char privates[76];
-} QDGlobals;
-#endif
-
 // should be 206 bytes
 typedef struct {
-    uint8_t privates[76]; // 76
-    uint32_t randSeed;      // 4
-    BitMap screenBits;      // 14
-    Cursor arrow;           // 68
-    Pattern dkGray;         // 8
+    uint8_t privates[76];
+    uint32_t randSeed;
+    BitMap screenBits;
+    Cursor arrow;
+    Pattern dkGray;
     Pattern ltGray;
     Pattern gray;
     Pattern black;
     Pattern white;
-    uint32_t thePort;       // 4
+    uint32_t thePort;
 } QDGlobals;
+
+typedef struct {
+    uint16_t red;
+    uint16_t green;
+    uint16_t blue;
+} RGBColor;
 
 #pragma pack(pop)

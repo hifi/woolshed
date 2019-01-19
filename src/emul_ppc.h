@@ -42,7 +42,10 @@ typedef struct {
 
 #define PPC_ARG_INT(cpu, i) (int32_t)cpu->r[2 + i]
 #define PPC_ARG_SHORT(cpu, i) (int16_t)cpu->r[2 + i]
-#define PPC_ARG_PTR(cpu, i) (void *)((uint8_t *)cpu->ram + cpu->r[2 + i])
+#define PPC_ARG_PTR(cpu, i) \
+    (cpu->r[2 + i] == 0 ? (void *)0 : \
+        (cpu->r[2 + i] == 0xFFFFFFFF ? (void *)(-1) : \
+        (void *)((uint8_t *)cpu->ram + cpu->r[2 + i])))
 #define PPC_RETURN_INT(cpu, i) { cpu->r[3] = (int32_t)i; return 0; }
 
 // FIXME: swap only when host is little endian

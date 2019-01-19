@@ -35,7 +35,7 @@ $(STDCLIB): $(STDCLIB_SRC) $(STDCLIB_HDR)
 	$(CC) -shared $(CFLAGS) -o $@ $(STDCLIB_SRC)
 
 $(INTERFACELIB): $(INTERFACELIB_SRC) $(INTERFACELIB_HDR)
-	$(CC) -shared $(CFLAGS) -o $@ $(INTERFACELIB_SRC)
+	$(CC) -shared $(CFLAGS) $(shell sdl2-config --cflags) -o $@ $(INTERFACELIB_SRC) $(shell sdl2-config --libs)
 
 $(MATHLIB): $(MATHLIB_SRC) $(MATHLIB_HDR)
 	$(CC) -shared $(CFLAGS) -o $@ $(MATHLIB_SRC)
