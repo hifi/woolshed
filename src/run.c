@@ -29,6 +29,7 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <dlfcn.h>
+#include <signal.h>
 
 #include "pef.h"
 #include "cleanup.h"
@@ -40,6 +41,14 @@ static emul_ppc_state cpu;
 
 // loaded PEF image
 PEFImage pef;
+
+static int do_break;
+
+void handle_int(int sig)
+{
+    fprintf(stderr, "\nInterrupted.\n");
+    do_break = 1;
+}
 
 // FIXME: random pointer list to external symbols
 typedef int (*ppc_import_t)(emul_ppc_state *);
@@ -274,7 +283,9 @@ int run(int argc, char **argv)
 
     printf("Emulation starting at 0x%08X with TOC at 0x%08X\n", cpu.pc, cpu.r[2]);
 
-    for (int fault; (fault = emul_ppc_run(&cpu, 0));)
+    signal(SIGINT, handle_int);
+
+    for (int fault; (fault = emul_ppc_run(&cpu, 0)) && !do_break;)
     {
         // handle some faults
         if (fault == PPC_FAULT_INST)
