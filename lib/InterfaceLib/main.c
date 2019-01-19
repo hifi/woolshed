@@ -6,6 +6,7 @@
 #include "../src/emul_ppc.h"
 #include "defs.h"
 #include "SDL.h"
+#include "SDL2_gfxPrimitives.h"
 
 // FIXME: these must be part of the returned window ptr for multi-window apps to work
 static SDL_Window *window;
@@ -209,8 +210,6 @@ int ppc_RGBForeColor(emul_ppc_state *cpu)
 {
     RGBColor *rgb = PPC_ARG_PTR(cpu, 1);
 
-    INFO("red = %d, green = %d, blue = %d", PPC_SHORT(rgb->red), PPC_SHORT(rgb->green), PPC_SHORT(rgb->blue));
-
     SDL_SetRenderDrawColor(
             renderer,
             PPC_SHORT(rgb->red) >> 8,
@@ -229,8 +228,6 @@ int ppc_SetRect(emul_ppc_state *cpu)
     uint16_t right = PPC_ARG_INT(cpu, 4);
     uint16_t bottom = PPC_ARG_INT(cpu, 5);
 
-    FIXME("(rect=%p, left=%d, top=%d, right=%d, bottom=%d)", r, left, top, right, bottom);
-
     r->left = PPC_SHORT(left);
     r->top = PPC_SHORT(top);
     r->right = PPC_SHORT(right);
@@ -243,8 +240,6 @@ int ppc_MoveTo(emul_ppc_state *cpu)
     uint16_t h = PPC_ARG_INT(cpu, 1);
     uint16_t v = PPC_ARG_INT(cpu, 2);
 
-    INFO("(h=%d, v=%d)", h, v);
-
     pen.h = h;
     pen.v = v;
 
@@ -253,17 +248,21 @@ int ppc_MoveTo(emul_ppc_state *cpu)
 
 int ppc_PaintOval(emul_ppc_state *cpu)
 {
+    union {
+        uint32_t i;
+        uint8_t rgba[4];
+    } color;
     Rect *r = PPC_ARG_PTR(cpu, 1);
-    SDL_Rect r2;
 
-    r2.x = PPC_SHORT(r->left);
-    r2.y = PPC_SHORT(r->top);
-    r2.w = PPC_SHORT(r->right) - PPC_SHORT(r->left);
-    r2.h = PPC_SHORT(r->bottom) - PPC_SHORT(r->top);
+    SDL_GetRenderDrawColor(renderer, &color.rgba[0], &color.rgba[1], &color.rgba[2], &color.rgba[3]);
 
-    INFO("(r=%p [%d %d %d %d])", r, r2.x, r2.y, r2.w, r2.h);
-
-    SDL_RenderFillRect(renderer, &r2);
+    filledEllipseColor(
+        renderer,
+        PPC_SHORT(r->left),
+        PPC_SHORT(r->top),
+        PPC_SHORT(r->right) - PPC_SHORT(r->left),
+        PPC_SHORT(r->bottom) - PPC_SHORT(r->top),
+        color.i);
 
     return 0;
 }
