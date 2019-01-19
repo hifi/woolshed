@@ -206,7 +206,7 @@ int run(int argc, char **argv)
                             printf(" (using stub, %s not found in any lib)\n", buf);
 
                         // real symbol pointers, could be stored in application memory as well
-                        extImports[importIndex] = (ppc_import_t)sym;
+                        *(void **)(&extImports[importIndex]) = sym;
 
                         // this is a trampoline to run_import with importIndex
                         uint32_t tmp[2];
@@ -275,9 +275,9 @@ int run(int argc, char **argv)
             if (primop == 6)
             {
                 uint32_t idx = (op & 0x3FFFFFF);
-                int (*importFunc)(emul_ppc_state *) = extImports[idx];
+                ppc_import_t import = extImports[idx];
 
-                if (!importFunc)
+                if (!import)
                 {
                     PEFSymbolTableEntry *symbol = &pef.symbols[idx];
                     const char *symbolName = PEFLoaderString(pef, symbol->s.offset);
@@ -285,7 +285,7 @@ int run(int argc, char **argv)
                     break;
                 }
 
-                if (importFunc(&cpu))
+                if (import(&cpu))
                 {
                     printf("PPC: Import function requested exit.\n");
                     break;
