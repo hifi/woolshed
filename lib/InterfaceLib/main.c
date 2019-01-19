@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "debug.h"
 #include "../src/emul_ppc.h"
 #include "defs.h"
@@ -52,11 +53,14 @@ int ppc_InitGraf(emul_ppc_state *cpu)
 
     FIXME("(thePort=%p [0x%08X]) stub", thePort, PPC_ARG_INT(cpu, 1));
 
-    QDGlobals *qd = (void *)((uint8_t *)thePort - (sizeof(QDGlobals) - sizeof(uint32_t)));
+    QDGlobals *qd = (void *)(((uint8_t *)thePort + sizeof(uint32_t)) - sizeof(QDGlobals));
 
     memset(qd, 0, sizeof(*qd));
+
     qd->screenBits.bounds.right = 1024;
     qd->screenBits.bounds.bottom = 768;
+
+    FIXME("Setting screen size to %dx%d", qd->screenBits.bounds.right, qd->screenBits.bounds.bottom);
     return 0;
 }
 
@@ -111,10 +115,25 @@ int ppc_InsetRect(emul_ppc_state *cpu)
     int16_t dh = PPC_ARG_SHORT(cpu, 3);
 
     FIXME("(r=%p [0x%08X], dv=%d, dh=%d) stub", (void *)r, PPC_ARG_INT(cpu, 1), dv, dh);
+
+    INFO("From:");
     INFO("r->top = %d", r->top);
     INFO("r->left = %d", r->left);
     INFO("r->right = %d", r->right);
     INFO("r->bottom = %d", r->bottom);
+
+    r->top += dv;
+    r->bottom -= fminl(dv, r->right);
+
+    r->left += dh;
+    r->right -= fminl(dh, r->right);
+
+    INFO("To:");
+    INFO("r->top = %d", r->top);
+    INFO("r->left = %d", r->left);
+    INFO("r->right = %d", r->right);
+    INFO("r->bottom = %d", r->bottom);
+
     return 0;
 }
 

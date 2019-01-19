@@ -38,8 +38,8 @@ typedef struct {
 } BitMap;
 
 typedef struct {
-    uint16_t data;
-    uint16_t mask;
+    uint16_t data[16];
+    uint16_t mask[16];
     Point hotSpot;
 } Cursor;
 
@@ -47,17 +47,33 @@ typedef struct {
     uint8_t pat[8];
 } Pattern;
 
+#if 0
 typedef struct {
-    /* how much we can store custom data here? */
-    uint32_t randSeed;
-    BitMap screenBits;
-    Cursor arrow;
+    uint32_t thePort;
+    Pattern white;
+    Pattern black;
+    Pattern gray;
+    Pattern ltGray;
     Pattern dkGray;
+    Cursor arrow;
+    BitMap screenBits;
+    uint32_t randSeed;
+    char privates[76];
+} QDGlobals;
+#endif
+
+// should be 206 bytes
+typedef struct {
+    uint8_t privates[76]; // 76
+    uint32_t randSeed;      // 4
+    BitMap screenBits;      // 14
+    Cursor arrow;           // 68
+    Pattern dkGray;         // 8
     Pattern ltGray;
     Pattern gray;
     Pattern black;
     Pattern white;
-    uint32_t thePort;
+    uint32_t thePort;       // 4
 } QDGlobals;
 
 #pragma pack(pop)
