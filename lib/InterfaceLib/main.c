@@ -127,25 +127,11 @@ int ppc_InsetRect(emul_ppc_state *cpu)
     int16_t dv = PPC_ARG_SHORT(cpu, 2);
     int16_t dh = PPC_ARG_SHORT(cpu, 3);
 
-    FIXME("(r=%p [0x%08X], dv=%d, dh=%d) stub", (void *)r, PPC_ARG_INT(cpu, 1), dv, dh);
-
-    INFO("From:");
-    INFO("r->top = %d", r->top);
-    INFO("r->left = %d", r->left);
-    INFO("r->right = %d", r->right);
-    INFO("r->bottom = %d", r->bottom);
-
     r->top = PPC_SHORT(PPC_SHORT(r->top) + dv);
     r->bottom = PPC_SHORT(PPC_SHORT(r->bottom) - fminl(dv, PPC_SHORT(r->bottom)));
 
     r->left = PPC_SHORT(PPC_SHORT(r->left) + dh);
     r->right = PPC_SHORT(PPC_SHORT(r->right) - fminl(dh, PPC_SHORT(r->right)));
-
-    INFO("To:");
-    INFO("r->top = %d", r->top);
-    INFO("r->left = %d", r->left);
-    INFO("r->right = %d", r->right);
-    INFO("r->bottom = %d", r->bottom);
 
     return 0;
 }
@@ -189,7 +175,13 @@ int ppc_SetPort(emul_ppc_state *cpu)
 
 int ppc_TextSize(emul_ppc_state *cpu)
 {
-    FIXME("(...) stub");
+    uint16_t size = PPC_ARG_INT(cpu, 1);
+
+    if (size != 8)
+    {
+        WARN("requested %d size text, we only have 8");
+    }
+
     return 0;
 }
 
@@ -256,26 +248,43 @@ int ppc_PaintOval(emul_ppc_state *cpu)
 
     SDL_GetRenderDrawColor(renderer, &color.rgba[0], &color.rgba[1], &color.rgba[2], &color.rgba[3]);
 
-    filledEllipseColor(
-        renderer,
-        PPC_SHORT(r->left),
-        PPC_SHORT(r->top),
-        PPC_SHORT(r->right) - PPC_SHORT(r->left),
-        PPC_SHORT(r->bottom) - PPC_SHORT(r->top),
-        color.i);
+    int x = PPC_SHORT(r->left),
+        y = PPC_SHORT(r->top),
+        w = PPC_SHORT(r->right) - PPC_SHORT(r->left),
+        h = PPC_SHORT(r->bottom) - PPC_SHORT(r->top);
+
+    x += w/2;
+    y += h/2;
+
+    filledEllipseColor(renderer, x, y, w, h, color.i);
 
     return 0;
 }
 
 int ppc_InvertColor(emul_ppc_state *cpu)
 {
-    FIXME("(...) stub");
+    RGBColor *rgb = PPC_ARG_PTR(cpu, 1);
+
+    rgb->red = PPC_SHORT(0xFFFF - PPC_SHORT(rgb->red));
+    rgb->green = PPC_SHORT(0xFFFF - PPC_SHORT(rgb->green));
+    rgb->blue = PPC_SHORT(0xFFFF - PPC_SHORT(rgb->blue));
+
     return 0;
 }
 
 int ppc_DrawString(emul_ppc_state *cpu)
 {
-    FIXME("(...) stub");
+    union {
+        uint32_t i;
+        uint8_t rgba[4];
+    } color;
+
+    Str255 *s = PPC_ARG_PTR(cpu, 1);
+
+    SDL_GetRenderDrawColor(renderer, &color.rgba[0], &color.rgba[1], &color.rgba[2], &color.rgba[3]);
+
+    stringColor(renderer, pen.h, pen.v, s->str, color.i);
+
     return 0;
 }
 
