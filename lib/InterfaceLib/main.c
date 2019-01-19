@@ -282,9 +282,25 @@ int ppc_DrawString(emul_ppc_state *cpu)
 
 int ppc_Button(emul_ppc_state *cpu)
 {
-    FIXME("(...) stub");
+    SDL_Event event;
 
+    // FIXME: caller doesn't flip the screen, one hack here
     SDL_UpdateWindowSurface(window);
+
+    while (SDL_PollEvent(&event))
+    {
+        switch (event.type)
+        {
+            case SDL_MOUSEBUTTONUP:
+            case SDL_MOUSEBUTTONDOWN:
+            case SDL_KEYDOWN:
+            case SDL_KEYUP:
+            case SDL_QUIT:
+                PPC_RETURN_INT(cpu, 1);
+            default:
+                break;
+        }
+    }
 
     PPC_RETURN_INT(cpu, 0);
 }
