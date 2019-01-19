@@ -66,8 +66,8 @@ int ppc_InitGraf(emul_ppc_state *cpu)
 
     memset(qd, 0, sizeof(*qd));
 
-    qd->screenBits.bounds.right = 1024;
-    qd->screenBits.bounds.bottom = 768;
+    qd->screenBits.bounds.right = PPC_SHORT(1024);
+    qd->screenBits.bounds.bottom = PPC_SHORT(768);
 
     FIXME("Setting screen size to %dx%d", qd->screenBits.bounds.right, qd->screenBits.bounds.bottom);
     return 0;
@@ -133,11 +133,11 @@ int ppc_InsetRect(emul_ppc_state *cpu)
     INFO("r->right = %d", r->right);
     INFO("r->bottom = %d", r->bottom);
 
-    r->top += dv;
-    r->bottom -= fminl(dv, r->right);
+    r->top = PPC_SHORT(PPC_SHORT(r->top) + dv);
+    r->bottom = PPC_SHORT(PPC_SHORT(r->bottom) - fminl(dv, PPC_SHORT(r->bottom)));
 
-    r->left += dh;
-    r->right -= fminl(dh, r->right);
+    r->left = PPC_SHORT(PPC_SHORT(r->left) + dh);
+    r->right = PPC_SHORT(PPC_SHORT(r->right) - fminl(dh, PPC_SHORT(r->right)));
 
     INFO("To:");
     INFO("r->top = %d", r->top);
@@ -201,22 +201,20 @@ int ppc_Random(emul_ppc_state *cpu)
         rand_init = 1;
     }
 
-    int16_t ret = (int16_t)((rand() % 65536) - 32767);
-    FIXME("Returning %d", ret);
-    PPC_RETURN_INT(cpu, ret & 0xFFFF);
+    PPC_RETURN_INT(cpu, (rand() % 65536) - 32767);
 }
 
 int ppc_RGBForeColor(emul_ppc_state *cpu)
 {
     RGBColor *rgb = PPC_ARG_PTR(cpu, 1);
 
-    INFO("(%d, %d, %d)\n", rgb->red, rgb->green, rgb->blue);
+    INFO("red = %d, green = %d, blue = %d", PPC_SHORT(rgb->red), PPC_SHORT(rgb->green), PPC_SHORT(rgb->blue));
 
     SDL_SetRenderDrawColor(
             renderer,
-            rgb->red >> 16,
-            rgb->green >> 16,
-            rgb->blue >> 16,
+            PPC_SHORT(rgb->red) >> 16,
+            PPC_SHORT(rgb->green) >> 16,
+            PPC_SHORT(rgb->blue) >> 16,
             0xFF);
 
     return 0;
@@ -232,6 +230,10 @@ int ppc_SetRect(emul_ppc_state *cpu)
 
     FIXME("(rect=%p, left=%d, top=%d, right=%d, bottom=%d)", r, left, top, right, bottom);
 
+    r->left = PPC_SHORT(left);
+    r->top = PPC_SHORT(top);
+    r->right = PPC_SHORT(right);
+    r->bottom = PPC_SHORT(bottom);
     return 0;
 }
 

@@ -46,7 +46,7 @@ typedef struct {
     (cpu->r[2 + i] == 0 ? (void *)0 : \
         (cpu->r[2 + i] == 0xFFFFFFFF ? (void *)(-1) : \
         (void *)((uint8_t *)cpu->ram + cpu->r[2 + i])))
-#define PPC_RETURN_INT(cpu, i) { cpu->r[3] = (int32_t)i; return 0; }
+#define PPC_RETURN_INT(cpu, i) { cpu->r[3] = (int32_t)((i) & 0xFFFFFFFF); return 0; }
 
 // FIXME: swap only when host is little endian
 #define PPC_INT64 bswap_64
