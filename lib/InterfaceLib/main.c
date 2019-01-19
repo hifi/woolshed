@@ -10,6 +10,7 @@
 // FIXME: these must be part of the returned window ptr for multi-window apps to work
 static SDL_Window *window;
 static SDL_Renderer *renderer;
+static Point pen;
 
 // application may give us this at some point
 static QDGlobals *qd;
@@ -169,8 +170,8 @@ int ppc_NewCWindow(emul_ppc_state *cpu)
     window = SDL_CreateWindow(
             title->str,
             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-            boundsRect->right - boundsRect->left,
-            boundsRect->bottom - boundsRect->top,
+            PPC_SHORT(boundsRect->right) - PPC_SHORT(boundsRect->left),
+            PPC_SHORT(boundsRect->bottom) - PPC_SHORT(boundsRect->top),
             0);
 
     surface = SDL_GetWindowSurface(window);
@@ -212,9 +213,9 @@ int ppc_RGBForeColor(emul_ppc_state *cpu)
 
     SDL_SetRenderDrawColor(
             renderer,
-            PPC_SHORT(rgb->red) >> 16,
-            PPC_SHORT(rgb->green) >> 16,
-            PPC_SHORT(rgb->blue) >> 16,
+            PPC_SHORT(rgb->red) >> 8,
+            PPC_SHORT(rgb->green) >> 8,
+            PPC_SHORT(rgb->blue) >> 8,
             0xFF);
 
     return 0;
@@ -239,13 +240,31 @@ int ppc_SetRect(emul_ppc_state *cpu)
 
 int ppc_MoveTo(emul_ppc_state *cpu)
 {
-    FIXME("(...) stub");
+    uint16_t h = PPC_ARG_INT(cpu, 1);
+    uint16_t v = PPC_ARG_INT(cpu, 2);
+
+    INFO("(h=%d, v=%d)", h, v);
+
+    pen.h = h;
+    pen.v = v;
+
     return 0;
 }
 
 int ppc_PaintOval(emul_ppc_state *cpu)
 {
-    FIXME("(...) stub");
+    Rect *r = PPC_ARG_PTR(cpu, 1);
+    SDL_Rect r2;
+
+    r2.x = PPC_SHORT(r->left);
+    r2.y = PPC_SHORT(r->top);
+    r2.w = PPC_SHORT(r->right) - PPC_SHORT(r->left);
+    r2.h = PPC_SHORT(r->bottom) - PPC_SHORT(r->top);
+
+    INFO("(r=%p [%d %d %d %d])", r, r2.x, r2.y, r2.w, r2.h);
+
+    SDL_RenderFillRect(renderer, &r2);
+
     return 0;
 }
 
@@ -264,7 +283,10 @@ int ppc_DrawString(emul_ppc_state *cpu)
 int ppc_Button(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
-    PPC_RETURN_INT(cpu, 1);
+
+    SDL_UpdateWindowSurface(window);
+
+    PPC_RETURN_INT(cpu, 0);
 }
 
 int ppc_FlushEvents(emul_ppc_state *cpu)
