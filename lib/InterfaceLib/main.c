@@ -255,6 +255,8 @@ int ppc_PaintOval(emul_ppc_state *cpu)
 
     x += w/2;
     y += h/2;
+    w /= 2;
+    h /= 2;
 
     filledEllipseColor(renderer, x, y, w, h, color.i);
 
@@ -283,7 +285,7 @@ int ppc_DrawString(emul_ppc_state *cpu)
 
     SDL_GetRenderDrawColor(renderer, &color.rgba[0], &color.rgba[1], &color.rgba[2], &color.rgba[3]);
 
-    stringColor(renderer, pen.h, pen.v, s->str, color.i);
+    stringColor(renderer, pen.h, pen.v - 4, s->str, color.i);
 
     return 0;
 }
