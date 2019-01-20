@@ -35,6 +35,7 @@
 #include "cleanup.h"
 #include "common.h"
 #include "emul_ppc.h"
+#include "mb.h"
 
 // global PPC CPU state
 static emul_ppc_state cpu;
@@ -60,18 +61,44 @@ int run(int argc, char **argv)
     int     ret   = EXIT_SUCCESS;
     FILE   *fh    = NULL;
     int8_t *image = NULL;
-
-    FAIL_IF(argc < 2, "usage: woolshed run <image>\n");
-
     uint32_t length;
-    FAIL_IF_SILENT(open_and_read(&fh, &image, &length, argv[1], "rb"));
+    MacBinary mb;
 
-    fclose(fh);
-    fh = NULL; // for cleanup
+    if (argc < 2)
+    {
+        fprintf(stderr, "usage: woolshed <file>\n");
+        goto cleanup;
+    }
+
+    fh = fopen(argv[1], "rb");
+
+    if (!fh)
+    {
+        perror("Failed to open file");
+        goto cleanup;
+    }
+
+    if (mb_load(&mb, fh))
+    {
+        printf("Detected MacBinary file: %d bytes of data and %d bytes of resources. Ignoring resources for now.\n", mb.dataLength, mb.resourceLength);
+        length = mb.dataLength;
+    }
+    else
+    {
+        fseek(fh, 0, SEEK_END);
+        length = ftell(fh);
+        fseek(fh, 0, SEEK_SET);
+    }
+
+    image = malloc(length);
+
+    if (!fread(image, length, 1, fh))
+    {
+        perror("Failed to read file");
+        goto cleanup;
+    }
 
     printf("\nRunning image '%s' (%d bytes)\n\n", argv[1], length);
-
-    FAIL_IF(length < 512, "File too small.\n");
 
     pef_init(&pef, image, length);
 
