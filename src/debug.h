@@ -26,8 +26,14 @@
     #define ERROR(...) fatal_printf("[ERROR] %s ", __func__, __VA_ARGS__)
     #define INFO(...) debug_printf("[INFO] %s ", __func__, __VA_ARGS__)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
     void debug_printf(const char *fmt, const char *fn, const char *fmt2, ...);
     void fatal_printf(const char *fmt, const char *fn, const char *fmt2, ...);
+#ifdef __cplusplus
+}
+#endif
 #else
     #define FIXME(...)
     #define WARN(...)

@@ -14,7 +14,7 @@ Caveats
 
 Quick Start
 -----------
-Depends on SDL2 and SDL2_gfx.
+Depends on Qt5.
 
 ```
 $ make

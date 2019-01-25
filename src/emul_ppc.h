@@ -53,6 +53,14 @@ typedef struct {
 #define PPC_INT bswap_32
 #define PPC_SHORT bswap_16
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void emul_ppc_init(emul_ppc_state *cpu);
 int emul_ppc_run(emul_ppc_state *cpu, int step);
 void emul_ppc_dump(emul_ppc_state *cpu);
+
+#ifdef __cplusplus
+}
+#endif
