@@ -264,7 +264,13 @@ extern "C" int ppc_GetNewCWindow(emul_ppc_state *cpu)
 
     FIXME("(windowID=0x%08X, wStorage=%p, behind=%p) stub", windowID, wStorage, behind);
 
-    PPC_RETURN_INT(cpu, -1);
+    FIXME("Returning empty 640x480 window.");
+    Window *win = new Window(640, 480);
+
+    int windowId = ++nextWindow;
+    windows.insert(windowId, win);
+
+    PPC_RETURN_INT(cpu, windowId);
 }
 
 extern "C" int ppc_SetPort(emul_ppc_state *cpu)
@@ -467,6 +473,20 @@ extern "C" int ppc_DrawMenuBar(emul_ppc_state *cpu)
 
 extern "C" int ppc_SystemTask(emul_ppc_state *cpu)
 {
-    FIXME("(...) stub");
+    return 0;
+}
+
+extern "C" int ppc_WaitNextEvent(emul_ppc_state *cpu)
+{
+    uint32_t eventMask = PPC_ARG_INT(cpu, 1);
+    void *theEvent = PPC_ARG_PTR(cpu, 2);
+    uint32_t sleep = PPC_ARG_INT(cpu, 3);
+    void *mouseRgn = PPC_ARG_PTR(cpu, 4);
+
+    FIXME("(eventMask=0x%08X, theEvent=%p, sleep=%d, mouseRgn=%p) stub", eventMask, theEvent, sleep, mouseRgn);
+
+    currentWindow->repaint();
+    app->processEvents();
+
     return 0;
 }
