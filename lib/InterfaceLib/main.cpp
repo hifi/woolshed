@@ -8,46 +8,102 @@
 
 #include <QtWidgets>
 
-// FIXME: these must be part of the returned window ptr for multi-window apps to work
-static Point pen;
-
-// application may give us this at some point
+// application global, should be fine
 static QDGlobals *qd;
 
-static char *argv[] = { "" };
+// required for QApplication
+static char *argv[] = {};
 static int argc = 0;
 static QApplication *app;
-static QColor color;
-static QImage *img;
 
-class CWindow : public QWidget
+class ImageWidget : public QWidget
 {
-public:
-    CWindow(int width, int height) : QWidget(nullptr) {
-        image = new QImage(width, height, QImage::Format_RGB32);
-        resize(width, height);
-        painter = new QPainter(this);
+    QPainter painter;
+    QPen pen;
+    QBrush brush;
+    QFont font;
+    QPoint point;
+    QColor fgColor;
+
+    QImage *image;
+
+    const QPainter& beginPaint() {
+        painter.begin(image);
+        painter.setPen(pen);
+        painter.setBrush(brush);
+        painter.setFont(font);
+        return painter;
     }
 
-    ~CWindow() {
-        free(painter);
+    void endPaint() {
+        painter.end();
+    }
+
+public:
+    ImageWidget(int width, int height, QWidget *parent) : QWidget(parent) {
+        image = new QImage(width, height, QImage::Format_RGB32);
+
+        // sane defaults
+        font.setFamily("Helvetica");
+        font.setPointSize(8);
+        brush.setStyle(Qt::SolidPattern);
+    }
+
+    ~ImageWidget() {
         free(image);
     }
 
-    void paintEvent(QPaintEvent *event) {
-        static QPoint point(0, 0);
-        painter->begin(this);
-        painter->drawImage(point, *image);
-        painter->end();
+    void moveTo(int x, int y) {
+        point.setX(x);
+        point.setY(y);
     }
 
-    QImage *image; // XXX AAAAAaaaaaaaa
+    void paintEvent(QPaintEvent *event) {
+        static QPoint origin(0, 0);
+        painter.begin(this);
+        painter.drawImage(origin, *image);
+        painter.end();
+    }
 
-private:
-    QPainter *painter;
+    void rgbForeColor(int r, int g, int b) {
+        fgColor.setRgb(r, g, b);
+        pen.setColor(fgColor);
+        brush.setColor(fgColor);
+    }
+
+    void paintOval(int x, int y, int w, int h) {
+        beginPaint();
+        painter.drawEllipse(x, y, w, h);
+        endPaint();
+    }
+
+    void drawString(const char *str) {
+        beginPaint();
+        painter.drawText(point, str);
+        endPaint();
+    }
 };
 
-static CWindow *win;
+class Window : public QMainWindow 
+{
+    ImageWidget *widget;
+
+public:
+    Window(int width, int height) : QMainWindow(nullptr) {
+        resize(width, height);
+
+        widget = new ImageWidget(width, height, this);
+        setCentralWidget(widget);
+    }
+
+    ImageWidget* image() {
+        return widget;
+    }
+};
+
+static QMap<int, Window*> windows;
+static int nextWindow;
+static Window *currentWindow;
 
 extern "C" int ppc_GetApplLimit(emul_ppc_state *cpu)
 {
@@ -186,11 +242,14 @@ extern "C" int ppc_NewCWindow(emul_ppc_state *cpu)
 
     int w = PPC_SHORT(boundsRect->right) - PPC_SHORT(boundsRect->left);
     int h = PPC_SHORT(boundsRect->bottom) - PPC_SHORT(boundsRect->top);
-    win = new CWindow(w, h);
-    win->setWindowTitle(title->str);
-    win->show();
 
-    return 0;
+    Window *win = new Window(w, h);
+    win->setWindowTitle(title->str);
+
+    int windowId = ++nextWindow;
+    windows.insert(windowId, win);
+
+    PPC_RETURN_INT(cpu, windowId);
 }
 
 extern "C" int ppc_GetNewCWindow(emul_ppc_state *cpu)
@@ -206,7 +265,16 @@ extern "C" int ppc_GetNewCWindow(emul_ppc_state *cpu)
 
 extern "C" int ppc_SetPort(emul_ppc_state *cpu)
 {
-    FIXME("(...) stub");
+    uint32_t window = PPC_ARG_INT(cpu, 1);
+
+    INFO("(window=0x%08X)", window);
+
+    if (currentWindow)
+        currentWindow->hide();
+
+    currentWindow = windows.value(window, nullptr);
+    currentWindow->show();
+
     return 0;
 }
 
@@ -239,7 +307,7 @@ extern "C" int ppc_RGBForeColor(emul_ppc_state *cpu)
 {
     RGBColor *rgb = (RGBColor*)PPC_ARG_PTR(cpu, 1);
 
-    color.setRgb(PPC_SHORT(rgb->red) >> 8, PPC_SHORT(rgb->green) >> 8, PPC_SHORT(rgb->blue) >> 8);
+    currentWindow->image()->rgbForeColor(PPC_SHORT(rgb->red) >> 8, PPC_SHORT(rgb->green) >> 8, PPC_SHORT(rgb->blue) >> 8);
 
     return 0;
 }
@@ -264,8 +332,7 @@ extern "C" int ppc_MoveTo(emul_ppc_state *cpu)
     uint16_t h = PPC_ARG_INT(cpu, 1);
     uint16_t v = PPC_ARG_INT(cpu, 2);
 
-    pen.h = h;
-    pen.v = v;
+    currentWindow->image()->moveTo(h, v);
 
     return 0;
 }
@@ -279,12 +346,7 @@ extern "C" int ppc_PaintOval(emul_ppc_state *cpu)
         w = PPC_SHORT(r->right) - PPC_SHORT(r->left),
         h = PPC_SHORT(r->bottom) - PPC_SHORT(r->top);
 
-    QPainter painter(win->image);
-    QPen qpen(color);
-    QBrush brush(color);
-    painter.setPen(qpen);
-    painter.setBrush(brush);
-    painter.drawEllipse(x, y, w, h);
+    currentWindow->image()->paintOval(x, y, w, h);
 
     return 0;
 }
@@ -304,19 +366,14 @@ extern "C" int ppc_DrawString(emul_ppc_state *cpu)
 {
     Str255 *s = (Str255*)PPC_ARG_PTR(cpu, 1);
 
-    QPainter painter(win->image);
-    QPen qpen(color);
-    QFont sansFont("Helvetica", 8);
-    painter.setFont(sansFont);
-    painter.setPen(qpen);
-    painter.drawText(QPoint(pen.h, pen.v), s->str);
+    currentWindow->image()->drawString(s->str);
 
     return 0;
 }
 
 extern "C" int ppc_Button(emul_ppc_state *cpu)
 {
-    win->repaint();
+    currentWindow->repaint();
     app->processEvents();
 
     PPC_RETURN_INT(cpu, 0);
