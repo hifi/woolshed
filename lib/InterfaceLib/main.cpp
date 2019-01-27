@@ -45,7 +45,7 @@ public:
 
         // sane defaults
         font.setFamily("Helvetica");
-        font.setPointSize(8);
+        font.setPointSize(12);
         brush.setStyle(Qt::SolidPattern);
     }
 
@@ -75,6 +75,10 @@ public:
         beginPaint();
         painter.drawEllipse(x, y, w, h);
         endPaint();
+    }
+
+    void textSize(int size) {
+        font.setPointSize(size);
     }
 
     void drawString(const char *str) {
@@ -282,10 +286,7 @@ extern "C" int ppc_TextSize(emul_ppc_state *cpu)
 {
     uint16_t size = PPC_ARG_INT(cpu, 1);
 
-    if (size != 8)
-    {
-        WARN("requested %d size text, we only have 8");
-    }
+    currentWindow->image()->textSize(size);
 
     return 0;
 }
