@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <byteswap.h>
 
+#ifndef EMUL_PPC_H
+
 enum {
     PPC_FAULT_NONE  = 0,
     PPC_FAULT_INST  = 1,
@@ -63,4 +65,7 @@ void emul_ppc_dump(emul_ppc_state *cpu);
 
 #ifdef __cplusplus
 }
+#endif
+
+#define EMUL_PPC_H
 #endif

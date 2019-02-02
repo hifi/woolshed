@@ -36,6 +36,9 @@
 #include "common.h"
 #include "emul_ppc.h"
 #include "mb.h"
+#include "heap.h"
+
+#define STACK_SIZE (32 * 1024)
 
 // global PPC CPU state
 static emul_ppc_state cpu;
@@ -111,7 +114,12 @@ int run(int argc, char **argv)
     cpu.ram_size = 64*1024*1024; // FIXME: yeah
     cpu.ram = calloc(1, cpu.ram_size);
 
+    heap_init(cpu.ram_size);
+    heap_alloc(4096); // zero zone for invalid addresses
+    cpu.r[1] = heap_alloc(STACK_SIZE);
+
     printf("  RAM = %p (%d bytes)\n", cpu.ram, cpu.ram_size);
+    printf("  stack = %d bytes\n", STACK_SIZE);
 
     printf("\n");
 
@@ -119,7 +127,8 @@ int run(int argc, char **argv)
     {
         PEFSectionHeader *section = &pef.sections[i];
 
-        section->defaultAddress = (i + 1) * 0x1000000; // FIXME: random
+        heap_align((uint32_t)pow(2, section->alignment));
+        section->defaultAddress = heap_alloc(section->totalSize);
 
         pef_load_section(&pef, i, cpu.ram, cpu.ram_size);
     }
@@ -155,8 +164,6 @@ int run(int argc, char **argv)
         printf(" %d relocations for section %d...\n", relocSection->relocCount, relocSection->sectionIndex);
 
         uint32_t relocAddress = pef.sections[relocSection->sectionIndex].defaultAddress;
-        uint32_t importIndex = 0;
-        uint32_t importBase = 0x3000000; // FIXME: uh, no
         uint32_t sectionC = pef.sections[0].defaultAddress;
         uint32_t sectionD = pef.sections[1].defaultAddress;
 
@@ -217,6 +224,9 @@ int run(int argc, char **argv)
             {
                 uint16_t runLength = (relocs[i] & 0x1FF) + 1;
                 uint32_t *relocBase = PPC_PTR_INT(&cpu, relocAddress);
+                uint32_t importIndex = 0;
+                heap_align(4096);
+                uint32_t importBase = heap_alloc(runLength * 8); // two words per import
 
                 printf("    RelocImportRun for %d imports\n", runLength);
                 for (uint16_t i = 0; i < runLength; i++)
@@ -253,10 +263,9 @@ int run(int argc, char **argv)
                         relocBase[i] = PPC_INT(importBase);
                         importBase += sizeof(tmp);
                     } else {
-                        printf(" (using memory)\n");
-                        // FIXME: these should come from the loaded library so these are dummies and of the wrong size (all words)
-                        // however, it seems most programs never use imported variables so might get away with it for a while
-                        relocBase[i] = PPC_INT(0x3C00000 + (importIndex * 4));
+                        printf(" (warn: setting to red zone)\n");
+                        // FIXME: this is bad but no one uses imported variables, right?
+                        relocBase[i] = 0;
                     }
                     relocAddress += 4;
                     importIndex++;
@@ -305,7 +314,6 @@ int run(int argc, char **argv)
 
     // set cpu state
     cpu.pc = PPC_INT(*PPC_PTR_INT(&cpu, pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset));
-    cpu.r[1] = cpu.ram_size - 0x10000; // FIXME: stack
     cpu.r[2] = PPC_INT(*PPC_PTR_INT(&cpu, pef.sections[pef.loader->mainSection].defaultAddress + pef.loader->mainOffset + 4));
 
     printf("Emulation starting at 0x%08X with TOC at 0x%08X\n", cpu.pc, cpu.r[2]);
