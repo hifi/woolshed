@@ -56,9 +56,10 @@ int dump(int argc, char **argv)
         goto cleanup;
     }
 
-    if (mb_load(&mb, fh))
+    if (mb_init(&mb, fh))
     {
         printf("Detected MacBinary file: %d bytes of data and %d bytes of resources. Ignoring resources for now.\n", mb.dataLength, mb.resourceLength);
+        mb_seek_data(&mb, fh);
         length = mb.dataLength;
         printf("Dumping MacBinary first:\n");
         mb_dump(&mb);

@@ -43,4 +43,6 @@ typedef struct {
 } MacBinary;
 
 void mb_dump(MacBinary *mb);
-bool mb_load(MacBinary *mb, FILE *fh);
+bool mb_init(MacBinary *mb, FILE *fh);
+void mb_seek_data(MacBinary *mb, FILE *fh);
+void mb_seek_resource(MacBinary *mb, FILE *fh);

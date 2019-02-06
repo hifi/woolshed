@@ -118,7 +118,7 @@ void mb_dump(MacBinary *mb)
     printf("neededVersion       = %d\n", mb->neededVersion);
 }
 
-bool mb_load(MacBinary *mb, FILE *fh)
+bool mb_init(MacBinary *mb, FILE *fh)
 {
     bool ret = false;
     long offset = ftell(fh);
@@ -135,8 +135,21 @@ bool mb_load(MacBinary *mb, FILE *fh)
     ret = true;
 
 error:
-    if (!ret)
-        fseek(fh, offset, SEEK_SET);
-
+    fseek(fh, offset, SEEK_SET);
     return ret;
+}
+
+void mb_seek_data(MacBinary *mb, FILE *fh)
+{
+    fseek(fh, 128, SEEK_SET);
+}
+
+void mb_seek_resource(MacBinary *mb, FILE *fh)
+{
+    int offset = 128 + mb->dataLength;
+
+    if (offset % 128)
+        offset += (offset % 128);
+
+    fseek(fh, offset, SEEK_SET);
 }

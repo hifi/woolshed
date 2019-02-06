@@ -422,12 +422,6 @@ extern "C" int ppc_ParamText(emul_ppc_state *cpu)
     return 0;
 }
 
-extern "C" int ppc_GetResource(emul_ppc_state *cpu)
-{
-    FIXME("(...) stub");
-    PPC_RETURN_INT(cpu, 0);
-}
-
 extern "C" int ppc_GetMBarHeight(emul_ppc_state *cpu)
 {
     FIXME("() stub");
@@ -483,7 +477,7 @@ extern "C" int ppc_WaitNextEvent(emul_ppc_state *cpu)
     uint32_t sleep = PPC_ARG_INT(cpu, 3);
     void *mouseRgn = PPC_ARG_PTR(cpu, 4);
 
-    FIXME("(eventMask=0x%08X, theEvent=%p, sleep=%d, mouseRgn=%p) stub", eventMask, theEvent, sleep, mouseRgn);
+    //FIXME("(eventMask=0x%08X, theEvent=%p, sleep=%d, mouseRgn=%p) stub", eventMask, theEvent, sleep, mouseRgn);
 
     currentWindow->repaint();
     app->processEvents();

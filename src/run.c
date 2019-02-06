@@ -37,6 +37,7 @@
 #include "emul_ppc.h"
 #include "mb.h"
 #include "heap.h"
+#include "res.h"
 
 #define STACK_SIZE (32 * 1024)
 
@@ -81,9 +82,11 @@ int run(int argc, char **argv)
         goto cleanup;
     }
 
-    if (mb_load(&mb, fh))
+    memset(&mb, 0, sizeof(mb));
+    if (mb_init(&mb, fh))
     {
         printf("Detected MacBinary file: %d bytes of data and %d bytes of resources. Ignoring resources for now.\n", mb.dataLength, mb.resourceLength);
+        mb_seek_data(&mb, fh);
         length = mb.dataLength;
     }
     else
@@ -117,6 +120,16 @@ int run(int argc, char **argv)
     heap_init(cpu.ram_size);
     heap_alloc(4096); // zero zone for invalid addresses
     cpu.r[1] = heap_alloc(STACK_SIZE);
+
+    if (mb.resourceLength)
+    {
+        uint32_t resourcePtr = heap_alloc(mb.resourceLength);
+        mb_seek_resource(&mb, fh);
+        printf("Resource starting at %ld\n", ftell(fh));
+        fread(PPC_PTR(&cpu, resourcePtr), mb.resourceLength, 1, fh);
+        printf("Resource read, %d bytes, file position %ld\n", mb.resourceLength, ftell(fh));
+        res_init(&cpu, resourcePtr);
+    }
 
     printf("  RAM = %p (%d bytes)\n", cpu.ram, cpu.ram_size);
     printf("  stack = %d bytes\n", STACK_SIZE);
