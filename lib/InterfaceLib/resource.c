@@ -28,9 +28,9 @@ extern "C" int ppc_GetResource(emul_ppc_state *cpu)
     FIXME("(name='%c%c%c%c', id=%d) stub", name.s[0], name.s[1], name.s[2], name.s[3], id);
 
     uint32_t handle = 0;
-    if ((handle = res_find(PPC_INT(name.i), id, 0, NULL, NULL)) > 0)
+    if ((handle = res_find(PPC_INT(name.i), id)) > 0)
     {
-        INFO("found!");
+        INFO("found! returning %08X", handle);
         PPC_RETURN_INT(cpu, handle);
     }
     else
@@ -44,7 +44,8 @@ extern "C" int ppc_GetResourceSizeOnDisk(emul_ppc_state *cpu)
 {
     uint32_t handle = PPC_ARG_INT(cpu, 1);
 
-    INFO("(handle=%08X)", handle);
+    FIXME("(handle=%08X) stub", handle);
+#if 0
 
     uint32_t size = 0;
     if (res_find(0, 0, handle, NULL, &size))
@@ -52,6 +53,7 @@ extern "C" int ppc_GetResourceSizeOnDisk(emul_ppc_state *cpu)
         PPC_RETURN_INT(cpu, size);
     }
 
+#endif
     PPC_RETURN_INT(cpu, 0);
 }
 
@@ -61,6 +63,9 @@ extern "C" int ppc_ReadPartialResource(emul_ppc_state *cpu)
     uint32_t offset = PPC_ARG_INT(cpu, 2);
     uint8_t *buffer = (uint8_t *)PPC_ARG_PTR(cpu, 3);
     uint32_t count = PPC_ARG_INT(cpu, 4);
+
+    FIXME("(handle=%08X, offset=%d, buffer=0x%08X, count=%d) stub", handle, offset, PPC_ARG_INT(cpu, 3), count);
+#if 0
 
     INFO("(handle=%08X, offset=%d, buffer=0x%08X, count=%d)", handle, offset, PPC_ARG_INT(cpu, 3), count);
 
@@ -74,10 +79,12 @@ extern "C" int ppc_ReadPartialResource(emul_ppc_state *cpu)
     for (uint32_t i = 0; i < count; i++)
         buffer[i] = ptr[i + offset];
 
+#endif
     PPC_RETURN_INT(cpu, 1);
 }
 
 extern "C" int ppc_HLock(emul_ppc_state *cpu)
 {
     FIXME("(...) stub");
+    PPC_RETURN_INT(cpu, 0);
 }
