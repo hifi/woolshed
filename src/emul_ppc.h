@@ -40,7 +40,7 @@ typedef struct {
     uint32_t ram_size;
 } emul_ppc_state;
 
-#define PPC_PTR(cpu, addr) (void *)((uint8_t *)(cpu)->ram + (addr))
+#define PPC_PTR(cpu, addr) (addr > 0 ? (void *)((uint8_t *)(cpu)->ram + (addr)) : (void *)0)
 #define PPC_PTR_INT(cpu, addr) (uint32_t *)((uint8_t *)(cpu)->ram + (addr))
 
 #define PPC_ARG_INT(cpu, i) (int32_t)cpu->r[2 + i]

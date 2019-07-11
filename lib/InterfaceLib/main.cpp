@@ -5,6 +5,8 @@
 #include "debug.h"
 #include "../src/emul_ppc.h"
 #include "defs.h"
+#include "../src/res.h"
+#include "../src/util.h"
 
 #include <QtWidgets>
 
@@ -262,10 +264,40 @@ extern "C" int ppc_GetNewCWindow(emul_ppc_state *cpu)
     void *wStorage = PPC_ARG_PTR(cpu, 2);
     void *behind = PPC_ARG_PTR(cpu, 3);
 
-    FIXME("(windowID=0x%08X, wStorage=%p, behind=%p) stub", windowID, wStorage, behind);
+    INFO("(windowID=0x%08X, wStorage=%p, behind=%p)", windowID, wStorage, behind);
 
-    FIXME("Returning empty 640x480 window.");
-    Window *win = new Window(640, 480);
+    uint32_t handle = res_find(RES_NAME('W','I','N','D'), windowID);
+    if (!handle) {
+        INFO(" not found, returning 0");
+        PPC_RETURN_INT(cpu, 0);
+    }
+
+    void *res = RES_PTR(handle);
+
+    Rect boundsRect;
+    boundsRect.top = PPC_SHORT(get_u16(&res, NULL));
+    boundsRect.left = PPC_SHORT(get_u16(&res, NULL));
+    boundsRect.bottom = PPC_SHORT(get_u16(&res, NULL));
+    boundsRect.right = PPC_SHORT(get_u16(&res, NULL));
+
+    uint16_t procID = PPC_SHORT(get_u16(&res, NULL));
+    uint16_t visible = PPC_SHORT(get_u16(&res, NULL));
+    uint16_t goAwayFlag = PPC_SHORT(get_u16(&res, NULL));
+
+    uint32_t unk = PPC_INT(get_u32(&res, NULL));
+    char title[256] = { '\0' };
+    get_str(&res, NULL, title, sizeof(title));
+
+    INFO("..boundsRect: %d %d %d %d", boundsRect.top, boundsRect.left, boundsRect.bottom, boundsRect.right);
+    INFO("..title: '%s'", title);
+
+    int w = boundsRect.right - boundsRect.left;
+    int h = boundsRect.bottom - boundsRect.top;
+
+    INFO("..creating a %dx%d window from resources", w, h);
+
+    Window *win = new Window(w, h);
+    win->setWindowTitle(title);
 
     int windowId = ++nextWindow;
     windows.insert(windowId, win);
